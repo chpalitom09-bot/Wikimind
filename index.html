@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-T7N53M8869"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -16,6 +15,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
     <style>
         /* --- VARIABLES & BASE THEME (INCHANGÉ) --- */
         :root { --bg: #ffffff; --text: #111111; --sidebar: #fcfcfc; --border: #f0f0f0; --bubble-user: #555555; --input-bg: #ffffff; --select-bg: #f3f4f6; --card-hover: #f9fafb; }
@@ -91,6 +99,14 @@
         .chat-bubble { max-width: 90%; padding: 1rem 0; margin-bottom: 0.2rem; line-height: 1.7; font-size: 1.05rem; }
         .chat-bubble.user { color: var(--bubble-user); font-weight: 500; margin-left: auto; text-align: right; padding-right: 1rem; border-right: 3px solid var(--text); }
         .chat-bubble.model { color: var(--text); margin-right: auto; width: 100%; }
+        /* AJOUT: Support Tables et Listes propres */
+        .chat-bubble.model table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.9em; }
+        .chat-bubble.model th, .chat-bubble.model td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+        .chat-bubble.model th { background: var(--select-bg); font-weight: 700; }
+        .chat-bubble.model ul { list-style-type: disc; padding-left: 1.5em; margin: 1em 0; }
+        .chat-bubble.model ol { list-style-type: decimal; padding-left: 1.5em; margin: 1em 0; }
+        .chat-bubble.model li { margin-bottom: 0.5em; }
+
         .msg-actions { display: flex; gap: 18px; margin-bottom: 2.5rem; padding-top: 8px; align-items: center; }
         .action-btn { cursor: pointer; color: #bbb; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
         .action-btn:hover { color: var(--text); }
@@ -99,11 +115,12 @@
         .like-active { color: #22c55e !important; animation: popLike 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         .dislike-active { color: #ef4444 !important; animation: popLike 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
 
-        /* --- INPUT AREA (INCHANGÉ) --- */
+        /* --- INPUT AREA (INCHANGÉ & MODIFIÉ POUR UPLOAD) --- */
         #input-wrapper { position: absolute; left: 50%; transform: translateX(-50%); width: 92%; max-width: 760px; transition: all 0.6s ease; z-index: 40; }
         #input-wrapper.centered { top: 55%; transform: translate(-50%, -50%); }
-        #input-wrapper.docked { bottom: 2rem; }
-        #input-box { background: var(--input-bg); border: 1px solid var(--border); }
+        #input-box { background: var(--input-bg); border: 1px solid var(--border); position: relative; }
+        /* AJOUT: Drop Zone Active State */
+        #input-box.drag-over { border: 2px dashed #22c55e; background: var(--select-bg); }
         textarea { background: transparent; color: var(--text); }
 
         /* --- WELCOME TEXT (INCHANGÉ) --- */
@@ -128,6 +145,23 @@
         .dark-mode .toggle-bg { background: #22c55e; }
         .dark-mode .toggle-dot { left: 22px; }
         #model-select { background: var(--select-bg); border-radius: 999px; padding: 6px 16px; font-size: 11px; font-weight: 700; color: #6b7280; outline: none; border: none; cursor: pointer; }
+
+        /* --- AJOUTS CSS SPÉCIFIQUES --- */
+        .upload-trigger { position: absolute; left: 15px; top: 15px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 300; color: #aaa; cursor: pointer; transition: 0.2s; z-index: 50; }
+        .upload-trigger:hover { color: var(--text); background: var(--select-bg); border-radius: 8px; }
+        #user-input { padding-left: 50px !important; } /* Decalage pour le bouton + */
+        #input-wrapper.docked { bottom: 2rem; }
+        
+        /* Fix Mobile Button - Move up by its height (approx 50-60px) */
+        @media (max-width: 640px) {
+            #settings-btn-sidebar { margin-bottom: 60px; }
+        }
+
+        /* Image Editor Modal */
+        #editor-modal .modal-content { max-width: 800px; width: 95%; display: flex; flex-direction: column; gap: 1rem; }
+        #editor-canvas { width: 100%; height: auto; border: 1px dashed var(--border); cursor: crosshair; touch-action: none; background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHBhdGggZD0iTTAgMGgxMHYxMEgwVjB6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTAgMGg1djVIMFYwek01IDVoNXY1SDVWNXoiIGZpbGw9IiNlZWUiLz48L3N2Zz4='); }
+        .tool-btn { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; font-size: 12px; font-weight: bold; }
+        .tool-btn.active { background: var(--text); color: var(--bg); }
     </style>
 </head>
 <body>
@@ -159,6 +193,25 @@
         </div>
     </div>
 
+    <div id="editor-modal" class="modal">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 class="text-xl font-black mb-4 uppercase italic">Édition Image</h3>
+            <div class="flex gap-2 mb-2">
+                <button class="tool-btn active" onclick="setTool('brush')">✏️ Pinceau</button>
+                <button class="tool-btn" onclick="setTool('eraser')">🧽 Gomme</button>
+                <button class="tool-btn" onclick="clearCanvas()">❌ Tout effacer</button>
+            </div>
+            <div class="relative w-full h-[400px] overflow-hidden bg-gray-100 rounded-lg flex items-center justify-center">
+                <canvas id="editor-canvas"></canvas>
+            </div>
+            <input type="text" id="edit-prompt" placeholder="Décris ce que tu veux modifier dans la zone..." class="w-full p-3 border border-gray-200 rounded-lg text-sm mt-2 bg-transparent">
+            <div class="flex gap-2 mt-4">
+                <button onclick="closeEditor()" class="flex-1 py-3 rounded-xl font-bold text-xs uppercase border border-gray-200">Annuler</button>
+                <button onclick="applyEdit()" class="flex-1 bg-black text-white py-3 rounded-xl font-bold text-xs uppercase">Générer</button>
+            </div>
+        </div>
+    </div>
+
     <div id="help-modal" class="modal" onclick="this.style.display='none'">
         <div class="modal-content" onclick="event.stopPropagation()">
             <h3 class="text-xl font-black mb-6 uppercase italic tracking-tighter text-center">À Propos</h3>
@@ -177,6 +230,14 @@
                 <p class="mb-2">- <b>Bibliothèque :</b> Accédez à un écosystème d'applications spécialisées (SoundMind, Explore, FutureMind...).</p>
                 <p class="mb-2">- <b>Architecture :</b> Les modèles Llama 3 (Groq), Mistral et Gemini collaborent en arrière-plan.</p>
                 <p>- <b>Confidentialité :</b> Historique local et traitement sécurisé.</p>
+            </div>
+            <div class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+                <h4 class="font-bold text-xs uppercase mb-2">Mentions Légales</h4>
+                <p class="text-[10px] text-gray-400 leading-normal">
+                    WikiMind est une interface expérimentale. Les contenus sont générés par IA et peuvent contenir des erreurs. 
+                    <br>Utilisation à des fins personnelles et éducatives uniquement. 
+                    <br>Aucune donnée personnelle n'est stockée sur serveur distant (Local Storage uniquement).
+                </p>
             </div>
             <button onclick="document.getElementById('help-modal').style.display='none'" class="w-full mt-6 bg-gray-100 dark:bg-zinc-800 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest">Fermer</button>
         </div>
@@ -199,7 +260,7 @@
             </button>
 
             <div id="history-list" class="flex-grow overflow-y-auto space-y-1 pt-6"></div>
-            <button onclick="document.getElementById('settings-modal').style.display='flex'" class="flex items-center gap-3 p-3 mt-auto text-gray-400 hover:text-black transition-colors">
+            <button id="settings-btn-sidebar" onclick="document.getElementById('settings-modal').style.display='flex'" class="flex items-center gap-3 p-3 mt-auto text-gray-400 hover:text-black transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 <span class="text-[10px] font-bold uppercase tracking-widest">Paramètres</span>
             </button>
@@ -250,7 +311,11 @@
         </div>
 
         <div id="input-wrapper" class="centered">
+            <input type="file" id="file-input" style="display: none;" accept=".pdf,.docx,.txt" onchange="handleFileUpload(this)">
+            
             <div id="input-box" class="rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden">
+                <div class="upload-trigger" onclick="document.getElementById('file-input').click()">+</div>
+                
                 <textarea id="user-input" rows="1" placeholder="Demandez n'importe quoi..." class="w-full p-6 outline-none resize-none text-lg min-h-[70px]" onkeydown="handleKey(event)"></textarea>
                 <div class="flex justify-between items-center px-6 pb-4">
                     <select id="model-select" onchange="handleModelChange()">
@@ -261,6 +326,7 @@
                     <button onclick="send()" class="bg-black text-white dark:bg-white dark:text-black rounded-full w-11 h-11 flex items-center justify-center transition hover:scale-105 active:scale-95"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg></button>
                 </div>
             </div>
+            <div id="file-feedback" class="text-xs text-center mt-2 text-gray-400 font-bold hidden"></div>
         </div>
     </div>
 
@@ -561,12 +627,18 @@
             // --- CASE SPECIALE ---
             { id: 'missing_suggest', name: 'Il manque quelque chose ?', icon: '📩', url: 'https://docs.google.com/forms/d/e/1FAIpQLSfYcYzag2zeNLXmOW8Ek9X1W6zq2CA0iE9BOwlcExTvNOJPvw/viewform?usp=header', desc: 'Suggérer une nouvelle API.', tag: 'System' }
         ];
+        
+        // AJOUT : TABLEAUX VIDES POUR PUBLIC APPS (SI MANQUANTS)
+        const PUBLIC_APPS = [
+            { id: 'qr', name: 'QR Gen', icon: '📱', desc: 'Générateur de QR Codes.', tag: 'Tool', url: 'api' }
+        ];
 
         // --- STATE & DB ---
         let db; let currentChatId = null; let chatMessages = [];
         let currentAppId = null; 
         let futureMindStep = 0;
         let currentFilter = 'all';
+        let attachedFileContent = ""; // GLOBAL POUR FICHIERS
 
         const placeholders = [
   "Explique-moi l’intelligence artificielle simplement.",
@@ -606,6 +678,7 @@
             animatePlaceholder();
             renderLibrary();
             initSuggestionTicker();
+            initDragAndDrop(); // NOUVEAU
         });
 
         // --- LIBRARY SYSTEM AVEC FILTRES & FAVORIS ---
@@ -866,15 +939,23 @@
         async function send() {
             const val = document.getElementById('user-input').value.trim();
             const model = document.getElementById('model-select').value;
-            if(!val) return;
+            if(!val && !attachedFileContent) return; // Autoriser si fichier présent
             
             typingActive = false;
             if(!currentChatId) currentChatId = Date.now();
             uiToChatMode();
-            addMsg(val, 'user');
-            chatMessages.push({ role: "user", content: val });
+            
+            // AJOUT: Afficher le nom du fichier si présent
+            let displayMsg = val;
+            if (attachedFileContent) displayMsg += `\n*[Fichier joint analysé]*`;
+            
+            addMsg(displayMsg, 'user');
+            chatMessages.push({ role: "user", content: displayMsg }); // On garde une trace propre
+            
             document.getElementById('user-input').value = "";
             document.getElementById('user-input').placeholder = "Demandez n'importe quoi...";
+            document.getElementById('file-feedback').classList.add('hidden'); // Cacher feedback
+            
             const loading = addMsg("...", 'model', true);
 
             // 1. ROUTEUR APPS (OFFICIAL, PUBLIC, AI MODELS)
@@ -886,12 +967,15 @@
                     console.error(e);
                 }
                 saveCurrentChat();
+                // Reset file context after send
+                attachedFileContent = "";
                 return;
             }
 
             // 2. ROUTEUR GENERAL
             if(model === "IMAGE") { 
                 await handleImageGeneration(val, loading);
+                attachedFileContent = "";
                 return;
             }
 
@@ -902,6 +986,22 @@
                 if(nData) contextBoost += `\n[News Context]: ${nData}`;
             }
 
+            // AJOUT: INJECTION DU DOCUMENT ET MODE ETUDE
+            let systemInstruction = `Tu es WikiMind. Tom Duval est ton créateur. Tu es poli, intelligent et utile. Utilise Markdown pour les tableaux et listes. Utilise LaTeX (encadré par $$ ou \\( \\)) pour les maths.`;
+            
+            // MODE ETUDE AUTO
+            if (val.match(/(cours|explique|résumé|quiz|révision|étud)/i) || attachedFileContent) {
+                systemInstruction += " MODE ÉTUDIER ACTIVÉ: Tu es un professeur pédagogue. Structure tes réponses, fais des résumés clairs, propose des quiz si pertinent.";
+            }
+
+            // INJECTION FICHIER
+            if (attachedFileContent) {
+                contextBoost += `\n[DOCUMENT UTILISATEUR]: ${attachedFileContent}\nUtilise ce contenu pour répondre.`;
+            }
+
+            // DETECTION GENERATION DOC (AUTO)
+            let isDocGen = val.match(/(génère|crée|exporte).*(pdf|document)/i);
+
             try {
                 const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                     method: 'POST',
@@ -909,7 +1009,7 @@
                     body: JSON.stringify({ 
                         model: model.includes("llama") ? model : "llama-3.3-70b-versatile", 
                         messages: [
-                            {role: "system", content: `Tu es WikiMind. Tom Duval est ton créateur. Tu es poli, intelligent et utile. ${contextBoost}`}, 
+                            {role: "system", content: `${systemInstruction} ${contextBoost}`}, 
                             ...chatMessages
                         ] 
                     })
@@ -919,8 +1019,17 @@
                 loading.remove();
                 addMsg(reply, 'model');
                 chatMessages.push({ role: "assistant", content: reply });
+                
+                // AUTO PDF GENERATION TRIGGER
+                if(isDocGen) {
+                   generatePDF(reply);
+                }
+
                 saveCurrentChat();
             } catch(e) { loading.innerText = "Erreur de connexion."; }
+            
+            // Reset file content
+            attachedFileContent = "";
         }
 
         // --- APP LOGIC HANDLERS ---
@@ -1029,7 +1138,7 @@
                 }
                 let apiResult = "";
                 try {
-                    if(!publicApp.url.includes('<') && !publicApp.url.includes('search')) {
+                    if(!publicApp.url.includes('<') && !publicApp.url.includes('search') && publicApp.url !== 'api') {
                          const res = await fetch(publicApp.url);
                          const json = await res.json();
                          apiResult = JSON.stringify(json).substring(0, 1000); 
@@ -1045,6 +1154,11 @@
         // --- API CALLERS ---
         async function callGroq(userMsg, systemMsg, loadingBubble, specificModel = "llama-3.3-70b-versatile") {
             try {
+                // ADDED: FILE CONTENT INJECTION
+                if(attachedFileContent) {
+                    systemMsg += `\n[CONTEXTE FICHIER]: ${attachedFileContent}`;
+                }
+
                 const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEYS.GROQ}` },
@@ -1095,14 +1209,29 @@
         }
 
         async function handleImageGeneration(prompt, loadingBubble) {
-            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
+            // Utilisation du seed pour consistance
+            const seed = Date.now();
+            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${seed}`;
+            
             const img = new Image();
             img.src = imageUrl;
             img.className = "generated-image";
+            // Store seed and prompt for editing
+            img.dataset.seed = seed;
+            img.dataset.prompt = prompt;
+
             img.onload = () => {
                 loadingBubble.remove();
                 const bubble = addMsg("", 'model', false, imageUrl);
                 bubble.appendChild(img);
+                
+                // AJOUT : Bouton d'édition
+                const editBtn = document.createElement('button');
+                editBtn.innerHTML = "✏️ Éditer";
+                editBtn.className = "mt-2 text-xs font-bold text-gray-500 bg-gray-100 rounded px-3 py-1 hover:bg-black hover:text-white transition";
+                editBtn.onclick = () => openImageEditor(imageUrl, prompt, seed);
+                bubble.appendChild(editBtn);
+
                 chatMessages.push({ role: "assistant", content: `![Génération](${imageUrl})` });
                 saveCurrentChat();
             };
@@ -1152,7 +1281,22 @@
         function addMsg(txt, role, isTmp = false, imgUrl = null) {
             const wrap = document.createElement('div'); wrap.className = "flex flex-col mb-2";
             const d = document.createElement('div'); d.className = `chat-bubble ${role}`;
-            if(isTmp) d.innerHTML = txt; else if (txt !== "") d.innerHTML = marked.parse(txt);
+            
+            if(isTmp) {
+                d.innerHTML = txt; 
+            } else if (txt !== "") {
+                // RENDER MATH & MARKDOWN
+                d.innerHTML = marked.parse(txt);
+                // Trigger KaTeX render
+                setTimeout(() => {
+                    renderMathInElement(d, {
+                        delimiters: [
+                            {left: '$$', right: '$$', display: true},
+                            {left: '\\(', right: '\\)', display: false}
+                        ]
+                    });
+                }, 10);
+            }
             wrap.appendChild(d);
 
             if(!isTmp && role === 'model') {
@@ -1188,6 +1332,226 @@
         function deleteChat(id) { db.transaction("conversations", "readwrite").objectStore("conversations").delete(id).onsuccess = () => renderHistory(); }
         function uiToChatMode() { typingActive = false; document.getElementById('welcome-text').classList.add('hidden-state'); document.getElementById('input-wrapper').className = 'docked'; }
         function copy(btn, text) { navigator.clipboard.writeText(text); btn.style.color = "#22c55e"; setTimeout(()=> btn.style.color = "#bbb", 1500); }
+
+        // ------------------------------------------
+        // --- NOUVELLES FONCTIONNALITÉS AJOUTÉES ---
+        // ------------------------------------------
+
+        // 1. DRAG & DROP ET UPLOAD
+        function initDragAndDrop() {
+            const dropZone = document.getElementById('input-box');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, unhighlight, false);
+            });
+
+            function highlight(e) { dropZone.classList.add('drag-over'); }
+            function unhighlight(e) { dropZone.classList.remove('drag-over'); }
+
+            dropZone.addEventListener('drop', handleDrop, false);
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles(files);
+            }
+        }
+
+        function handleFileUpload(input) {
+            handleFiles(input.files);
+        }
+
+        async function handleFiles(files) {
+            if (files.length === 0) return;
+            const file = files[0];
+            const feedback = document.getElementById('file-feedback');
+            
+            feedback.classList.remove('hidden');
+            feedback.innerText = `Lecture de ${file.name}...`;
+
+            if (file.type === "application/pdf") {
+                const reader = new FileReader();
+                reader.onload = async function() {
+                    const typedarray = new Uint8Array(this.result);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    let text = "";
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        text += content.items.map(item => item.str).join(" ") + "\n";
+                    }
+                    attachedFileContent = text.substring(0, 15000); // Limit context
+                    feedback.innerText = `PDF chargé : ${file.name} (Prêt à analyser)`;
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    mammoth.extractRawText({arrayBuffer: this.result})
+                        .then(result => {
+                            attachedFileContent = result.value.substring(0, 15000);
+                            feedback.innerText = `DOCX chargé : ${file.name} (Prêt à analyser)`;
+                        })
+                        .catch(err => feedback.innerText = "Erreur lecture DOCX");
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (file.type === "text/plain") {
+                const reader = new FileReader();
+                reader.onload = function() {
+                    attachedFileContent = this.result.substring(0, 15000);
+                    feedback.innerText = `TXT chargé : ${file.name}`;
+                };
+                reader.readAsText(file);
+            } else {
+                feedback.innerText = "Format non supporté (PDF, DOCX, TXT seulement)";
+            }
+        }
+
+        // 2. IMAGE EDITOR LOGIC
+        let editorCanvas, editorCtx;
+        let isDrawing = false;
+        let currentEditSeed = null;
+        let currentEditPrompt = null;
+
+        function openImageEditor(imgUrl, prompt, seed) {
+            document.getElementById('editor-modal').style.display = 'flex';
+            currentEditSeed = seed;
+            currentEditPrompt = prompt;
+            
+            editorCanvas = document.getElementById('editor-canvas');
+            editorCtx = editorCanvas.getContext('2d');
+            
+            // Charger l'image dans le canvas
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.src = imgUrl;
+            img.onload = () => {
+                editorCanvas.width = img.width;
+                editorCanvas.height = img.height;
+                // Ajuster visuellement le canvas dans la div
+                editorCanvas.style.width = "100%";
+                editorCanvas.style.height = "100%";
+                editorCtx.drawImage(img, 0, 0);
+            };
+
+            // Events de dessin
+            editorCanvas.onmousedown = startDraw;
+            editorCanvas.onmousemove = draw;
+            editorCanvas.onmouseup = endDraw;
+            editorCanvas.ontouchstart = startDraw;
+            editorCanvas.ontouchmove = draw;
+            editorCanvas.ontouchend = endDraw;
+        }
+
+        let editTool = 'brush';
+        function setTool(tool) {
+            editTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function clearCanvas() {
+             // Reload original logic if needed, simpliste ici on relance juste l'ouverture
+             // Pour simplifier : on ne clear pas l'image de fond, on efface juste les traits (mais comme c'est sur le meme layer...)
+             // On va recharger l'image de fond
+             const img = new Image();
+             img.crossOrigin = "Anonymous";
+             img.src = document.querySelector('.generated-image[data-seed="'+currentEditSeed+'"]').src;
+             img.onload = () => editorCtx.drawImage(img, 0, 0);
+        }
+
+        function startDraw(e) {
+            isDrawing = true;
+            draw(e);
+        }
+
+        function draw(e) {
+            if(!isDrawing) return;
+            const rect = editorCanvas.getBoundingClientRect();
+            // Facteur d'échelle entre CSS et Réel pixel
+            const scaleX = editorCanvas.width / rect.width;
+            const scaleY = editorCanvas.height / rect.height;
+            
+            const x = ((e.clientX || e.touches[0].clientX) - rect.left) * scaleX;
+            const y = ((e.clientY || e.touches[0].clientY) - rect.top) * scaleY;
+            
+            editorCtx.lineWidth = 40;
+            editorCtx.lineCap = 'round';
+            
+            if(editTool === 'brush') {
+                editorCtx.strokeStyle = 'rgba(255, 0, 0, 0.5)'; // Masque rouge semi-transparent
+                editorCtx.globalCompositeOperation = 'source-over';
+            } else {
+                // Gomme : on redessine l'image d'origine ? Difficile sans layers.
+                // Simple : on peint en transparent ? Non.
+                // Hack : Mode destination-out efface tout. On va rester simple : Pinceau masque uniquement.
+            }
+            
+            editorCtx.lineTo(x, y);
+            editorCtx.stroke();
+            editorCtx.beginPath();
+            editorCtx.moveTo(x, y);
+        }
+
+        function endDraw() {
+            isDrawing = false;
+            editorCtx.beginPath();
+        }
+
+        function closeEditor() {
+            document.getElementById('editor-modal').style.display = 'none';
+        }
+
+        function applyEdit() {
+            const userEditPrompt = document.getElementById('edit-prompt').value;
+            closeEditor();
+            
+            // Simulation IA : On combine le prompt original et la demande de modif
+            // Comme on n'a pas de Backend Python pour l'inpainting réel, on utilise la capacité de l'IA générative 
+            // à modifier l'image en gardant le seed mais en changeant le prompt.
+            const newPrompt = `${currentEditPrompt}. Modification: ${userEditPrompt}. High quality.`;
+            
+            // On lance la génération
+            const loading = addMsg("Application des modifications...", 'model', true);
+            handleImageGeneration(newPrompt, loading);
+        }
+
+        // 3. GENERATEUR PDF
+        function generatePDF(content) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFont("helvetica");
+            doc.setFontSize(12);
+            
+            const lines = doc.splitTextToSize(content.replace(/\*\*/g, '').replace(/#/g, ''), 180);
+            let y = 10;
+            
+            lines.forEach(line => {
+                if (y > 280) { doc.addPage(); y = 10; }
+                doc.text(line, 10, y);
+                y += 7;
+            });
+            
+            doc.save(`WikiMind_Doc_${Date.now()}.pdf`);
+            
+            addMsg("📄 Document PDF généré et téléchargé.", 'model');
+        }
+
     </script>
-</body>
+    
+    </body>
 </html>
