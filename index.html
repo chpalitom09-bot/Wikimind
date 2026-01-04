@@ -99,17 +99,13 @@
         .chat-bubble { max-width: 90%; padding: 1rem 0; margin-bottom: 0.2rem; line-height: 1.7; font-size: 1.05rem; }
         .chat-bubble.user { color: var(--bubble-user); font-weight: 500; margin-left: auto; text-align: right; padding-right: 1rem; border-right: 3px solid var(--text); }
         .chat-bubble.model { color: var(--text); margin-right: auto; width: 100%; }
-        
-        /* AJOUT: Support Tables et Listes propres (TASK 5) */
-        .chat-bubble.model table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.9em; table-layout: fixed; }
-        .chat-bubble.model th, .chat-bubble.model td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; word-break: break-word; }
+        /* AJOUT: Support Tables et Listes propres */
+        .chat-bubble.model table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.9em; }
+        .chat-bubble.model th, .chat-bubble.model td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
         .chat-bubble.model th { background: var(--select-bg); font-weight: 700; }
         .chat-bubble.model ul { list-style-type: disc; padding-left: 1.5em; margin: 1em 0; }
         .chat-bubble.model ol { list-style-type: decimal; padding-left: 1.5em; margin: 1em 0; }
         .chat-bubble.model li { margin-bottom: 0.5em; }
-
-        /* KaTeX Fixes */
-        .katex-display { overflow-x: auto; overflow-y: hidden; padding: 1em 0; }
 
         .msg-actions { display: flex; gap: 18px; margin-bottom: 2.5rem; padding-top: 8px; align-items: center; }
         .action-btn { cursor: pointer; color: #bbb; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
@@ -156,12 +152,12 @@
         #user-input { padding-left: 50px !important; } /* Decalage pour le bouton + */
         #input-wrapper.docked { bottom: 2rem; }
         
-        /* Fix Mobile Button (TASK 3) - Move up by its height (approx 50-60px) */
+        /* Fix Mobile Button - Move up by its height (approx 50-60px) */
         @media (max-width: 640px) {
             #settings-btn-sidebar { margin-bottom: 60px; }
         }
 
-        /* Image Editor Modal (TASK 2) */
+        /* Image Editor Modal */
         #editor-modal .modal-content { max-width: 800px; width: 95%; display: flex; flex-direction: column; gap: 1rem; }
         #editor-canvas { width: 100%; height: auto; border: 1px dashed var(--border); cursor: crosshair; touch-action: none; background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHBhdGggZD0iTTAgMGgxMHYxMEgwVjB6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTAgMGg1djVIMFYwek01IDVoNXY1SDVWNXoiIGZpbGw9IiNlZWUiLz48L3N2Zz4='); }
         .tool-btn { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; font-size: 12px; font-weight: bold; }
@@ -1003,7 +999,7 @@
                 contextBoost += `\n[DOCUMENT UTILISATEUR]: ${attachedFileContent}\nUtilise ce contenu pour répondre.`;
             }
 
-            // DETECTION GENERATION DOC (AUTO) (TASK 7)
+            // DETECTION GENERATION DOC (AUTO)
             let isDocGen = val.match(/(génère|crée|exporte).*(pdf|document)/i);
 
             try {
@@ -1024,7 +1020,7 @@
                 addMsg(reply, 'model');
                 chatMessages.push({ role: "assistant", content: reply });
                 
-                // AUTO PDF GENERATION TRIGGER (TASK 7)
+                // AUTO PDF GENERATION TRIGGER
                 if(isDocGen) {
                    generatePDF(reply);
                 }
@@ -1220,7 +1216,7 @@
             const img = new Image();
             img.src = imageUrl;
             img.className = "generated-image";
-            // Store seed and prompt for editing (TASK 2)
+            // Store seed and prompt for editing
             img.dataset.seed = seed;
             img.dataset.prompt = prompt;
 
@@ -1229,7 +1225,7 @@
                 const bubble = addMsg("", 'model', false, imageUrl);
                 bubble.appendChild(img);
                 
-                // AJOUT (TASK 2) : Bouton d'édition
+                // AJOUT : Bouton d'édition
                 const editBtn = document.createElement('button');
                 editBtn.innerHTML = "✏️ Éditer";
                 editBtn.className = "mt-2 text-xs font-bold text-gray-500 bg-gray-100 rounded px-3 py-1 hover:bg-black hover:text-white transition";
@@ -1289,7 +1285,7 @@
             if(isTmp) {
                 d.innerHTML = txt; 
             } else if (txt !== "") {
-                // RENDER MATH & MARKDOWN (TASK 5)
+                // RENDER MATH & MARKDOWN
                 d.innerHTML = marked.parse(txt);
                 // Trigger KaTeX render
                 setTimeout(() => {
@@ -1424,7 +1420,7 @@
             }
         }
 
-        // 2. IMAGE EDITOR LOGIC (TASK 2)
+        // 2. IMAGE EDITOR LOGIC
         let editorCanvas, editorCtx;
         let isDrawing = false;
         let currentEditSeed = null;
@@ -1533,7 +1529,7 @@
             handleImageGeneration(newPrompt, loading);
         }
 
-        // 3. GENERATEUR PDF (TASK 7)
+        // 3. GENERATEUR PDF
         function generatePDF(content) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
