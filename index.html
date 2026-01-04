@@ -308,6 +308,7 @@
 
     <div id="main-area">
         <button id="float-toggle" onclick="toggleSidebar()" class="absolute top-6 left-6 z-50 p-2 bg-white rounded-full shadow-sm border border-gray-100 text-black"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
+        <button id="float-new-chat" onclick="resetToHome()" class="absolute top-6 left-20 z-50 p-2 bg-white rounded-full shadow-sm border border-gray-100 text-black transition-all duration-300 hover:bg-gray-50 hover:scale-105" title="Nouveau Chat"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></button>
 
         <div id="app-header" class="hidden absolute top-6 left-1/2 transform -translate-x-1/2 bg-gray-100 dark:bg-zinc-800 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest text-gray-500 z-30">General</div>
 
@@ -1471,7 +1472,12 @@
 
         function toggleSidebar() { 
             const sb = document.getElementById('sidebar'); sb.classList.toggle('open');
-            document.getElementById('float-toggle').style.opacity = sb.classList.contains('open') ? "0" : "1";
+            const isOpen = sb.classList.contains('open');
+            // Hide/Show floating buttons based on sidebar state
+            document.getElementById('float-toggle').style.opacity = isOpen ? "0" : "1";
+            document.getElementById('float-toggle').style.pointerEvents = isOpen ? "none" : "auto";
+            document.getElementById('float-new-chat').style.opacity = isOpen ? "0" : "1";
+            document.getElementById('float-new-chat').style.pointerEvents = isOpen ? "none" : "auto";
         }
         function toggleDarkMode() { 
             document.body.classList.toggle('dark-mode');
