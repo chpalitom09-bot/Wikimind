@@ -11,7 +11,7 @@
 </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WikiMind V30 - Masterclass Edition</title>
+    <title>WikiMind 4.5 - Masterclass Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -99,13 +99,27 @@
         .chat-bubble { max-width: 90%; padding: 1rem 0; margin-bottom: 0.2rem; line-height: 1.7; font-size: 1.05rem; }
         .chat-bubble.user { color: var(--bubble-user); font-weight: 500; margin-left: auto; text-align: right; padding-right: 1rem; border-right: 3px solid var(--text); }
         .chat-bubble.model { color: var(--text); margin-right: auto; width: 100%; }
-        /* AJOUT: Support Tables et Listes propres */
-        .chat-bubble.model table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.9em; }
-        .chat-bubble.model th, .chat-bubble.model td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
-        .chat-bubble.model th { background: var(--select-bg); font-weight: 700; }
+        
+        /* TABLES STYLING (NEW) */
+        .chat-bubble.model table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.9em; border-radius: 8px; overflow: hidden; }
+        .chat-bubble.model th, .chat-bubble.model td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+        .chat-bubble.model th { background: var(--select-bg); font-weight: 700; text-transform: uppercase; font-size: 0.8em; }
+        
+        .table-wrapper { position: relative; margin-bottom: 1.5em; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .copy-table-btn { position: absolute; top: 0; right: 0; background: var(--select-bg); border: none; padding: 4px 10px; font-size: 10px; font-weight: bold; cursor: pointer; color: #666; border-bottom-left-radius: 8px; z-index: 5; }
+        .copy-table-btn:hover { background: var(--text); color: var(--bg); }
+
         .chat-bubble.model ul { list-style-type: disc; padding-left: 1.5em; margin: 1em 0; }
         .chat-bubble.model ol { list-style-type: decimal; padding-left: 1.5em; margin: 1em 0; }
         .chat-bubble.model li { margin-bottom: 0.5em; }
+
+        /* CODE BLOCK STYLING (NEW) */
+        .code-wrapper { position: relative; margin: 1em 0; background: #f4f4f5; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+        .dark-mode .code-wrapper { background: #18181b; }
+        .code-wrapper pre { margin: 0; padding: 1.2rem; overflow-x: auto; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 0.9em; }
+        .code-wrapper code { background: transparent !important; color: inherit; }
+        .copy-code-btn { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.1); color: var(--text); border: none; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .copy-code-btn:hover { background: var(--text); color: var(--bg); }
 
         .msg-actions { display: flex; gap: 18px; margin-bottom: 2.5rem; padding-top: 8px; align-items: center; }
         .action-btn { cursor: pointer; color: #bbb; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
@@ -114,14 +128,25 @@
         @keyframes popLike { 0% { transform: scale(1); } 40% { transform: scale(1.5); } 100% { transform: scale(1.1); } }
         .like-active { color: #22c55e !important; animation: popLike 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         .dislike-active { color: #ef4444 !important; animation: popLike 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        
+        /* Animation Rotation Edit Button */
+        @keyframes rotateBtn { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .rotate-anim { animation: rotateBtn 0.5s ease-in-out; color: var(--text) !important; }
 
         /* --- INPUT AREA (INCHANGÉ & MODIFIÉ POUR UPLOAD) --- */
         #input-wrapper { position: absolute; left: 50%; transform: translateX(-50%); width: 92%; max-width: 760px; transition: all 0.6s ease; z-index: 40; }
         #input-wrapper.centered { top: 55%; transform: translate(-50%, -50%); }
-        #input-box { background: var(--input-bg); border: 1px solid var(--border); position: relative; }
+        #input-box { background: var(--input-bg); border: 1px solid var(--border); position: relative; display: flex; flex-direction: column; }
         /* AJOUT: Drop Zone Active State */
         #input-box.drag-over { border: 2px dashed #22c55e; background: var(--select-bg); }
         textarea { background: transparent; color: var(--text); }
+
+        /* FILE PREVIEW AREA (NEW GEMINI STYLE) */
+        #file-preview-area { padding: 10px 20px 0 20px; display: none; }
+        .file-chip { display: inline-flex; align-items: center; gap: 10px; background: var(--select-bg); padding: 8px 16px; border-radius: 12px; border: 1px solid var(--border); font-size: 12px; font-weight: 600; }
+        .file-chip-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: var(--bg); border-radius: 6px; font-size: 14px; }
+        .file-remove { cursor: pointer; margin-left: 8px; color: #888; transition: 0.2s; }
+        .file-remove:hover { color: #ef4444; }
 
         /* --- WELCOME TEXT (INCHANGÉ) --- */
         #welcome-text { position: absolute; top: 32%; left: 50%; transform: translate(-50%, -50%); text-align: center; transition: 0.5s; width: 100%; }
@@ -137,9 +162,9 @@
         .delete-chat { opacity: 0; color: #ccc; transition: 0.2s; padding: 2px 6px; }
         .history-item:hover .delete-chat { opacity: 1; }
         
-        /* --- MODALS (INCHANGÉ) --- */
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .modal-content { background: var(--bg); border: 1px solid var(--border); padding: 2rem; border-radius: 24px; width: 90%; max-width: 450px; }
+        /* --- MODALS (INCHANGÉ & AMELIORÉ) --- */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+        .modal-content { background: var(--bg); border: 1px solid var(--border); padding: 2rem; border-radius: 24px; width: 90%; max-width: 450px; box-shadow: 0 20px 60px rgba(0,0,0,0.1); }
         .toggle-bg { width: 40px; height: 20px; background: #ddd; border-radius: 20px; position: relative; cursor: pointer; }
         .toggle-dot { width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: 0.3s; }
         .dark-mode .toggle-bg { background: #22c55e; }
@@ -157,8 +182,8 @@
             #settings-btn-sidebar { margin-bottom: 60px; }
         }
 
-        /* Image Editor Modal */
-        #editor-modal .modal-content { max-width: 800px; width: 95%; display: flex; flex-direction: column; gap: 1rem; }
+        /* Image Editor Modal (Amélioré) */
+        #editor-modal .modal-content { max-width: 800px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
         #editor-canvas { width: 100%; height: auto; border: 1px dashed var(--border); cursor: crosshair; touch-action: none; background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHBhdGggZD0iTTAgMGgxMHYxMEgwVjB6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTAgMGg1djVIMFYwek01IDVoNXY1SDVWNXoiIGZpbGw9IiNlZWUiLz48L3N2Zz4='); }
         .tool-btn { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; font-size: 12px; font-weight: bold; }
         .tool-btn.active { background: var(--text); color: var(--bg); }
@@ -188,6 +213,10 @@
                         <p class="text-[10px] text-gray-400 uppercase font-black tracking-tighter">Créateur & Admin</p>
                     </div>
                 </div>
+                <div class="mt-4 pt-2">
+                    <span class="text-[10px] text-gray-400">Partenaire : </span>
+                    <a href="https://chpalitom09-bot.github.io/Pepins-de-t-mates/" target="_blank" class="font-bold text-[10px] uppercase tracking-widest hover:opacity-70 transition" style="color: inherit; text-decoration: none;">Pépins de tomates</a>
+                </div>
             </div>
             <button onclick="document.getElementById('settings-modal').style.display='none'" class="w-full mt-8 bg-black dark:bg-white dark:text-black text-white py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest">Fermer</button>
         </div>
@@ -196,12 +225,12 @@
     <div id="editor-modal" class="modal">
         <div class="modal-content" onclick="event.stopPropagation()">
             <h3 class="text-xl font-black mb-4 uppercase italic">Édition Image</h3>
-            <div class="flex gap-2 mb-2">
+            <div class="flex gap-2 mb-2 flex-wrap">
                 <button class="tool-btn active" onclick="setTool('brush')">✏️ Pinceau</button>
                 <button class="tool-btn" onclick="setTool('eraser')">🧽 Gomme</button>
                 <button class="tool-btn" onclick="clearCanvas()">❌ Tout effacer</button>
             </div>
-            <div class="relative w-full h-[400px] overflow-hidden bg-gray-100 rounded-lg flex items-center justify-center">
+            <div class="relative w-full overflow-hidden bg-gray-100 rounded-lg flex items-center justify-center">
                 <canvas id="editor-canvas"></canvas>
             </div>
             <input type="text" id="edit-prompt" placeholder="Décris ce que tu veux modifier dans la zone..." class="w-full p-3 border border-gray-200 rounded-lg text-sm mt-2 bg-transparent">
@@ -237,6 +266,8 @@
                     WikiMind est une interface expérimentale. Les contenus sont générés par IA et peuvent contenir des erreurs. 
                     <br>Utilisation à des fins personnelles et éducatives uniquement. 
                     <br>Aucune donnée personnelle n'est stockée sur serveur distant (Local Storage uniquement).
+                    <br><br>
+                    Crédits IA : <a href="https://chpalitom09-bot.github.io/Pepins-de-t-mates/" target="_blank" class="font-bold hover:text-black transition" style="color:inherit; text-decoration:none;">Pépins de tomates</a>
                 </p>
             </div>
             <button onclick="document.getElementById('help-modal').style.display='none'" class="w-full mt-6 bg-gray-100 dark:bg-zinc-800 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest">Fermer</button>
@@ -311,9 +342,11 @@
         </div>
 
         <div id="input-wrapper" class="centered">
-            <input type="file" id="file-input" style="display: none;" accept=".pdf,.docx,.txt" onchange="handleFileUpload(this)">
+            <input type="file" id="file-input" style="display: none;" accept=".pdf,.docx,.txt,image/*" onchange="handleFileUpload(this)">
             
             <div id="input-box" class="rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden">
+                <div id="file-preview-area"></div>
+
                 <div class="upload-trigger" onclick="document.getElementById('file-input').click()">+</div>
                 
                 <textarea id="user-input" rows="1" placeholder="Demandez n'importe quoi..." class="w-full p-6 outline-none resize-none text-lg min-h-[70px]" onkeydown="handleKey(event)"></textarea>
@@ -354,7 +387,7 @@
         const AI_MODELS = [
             // Meta (Llama)
             { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', icon: '🦙', desc: 'Le modèle open-source le plus puissant de Meta. Polyvalence extrême.', tag: 'AI', rating: '9.8', type: 'text', provider: 'groq' },
-            { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B', icon: '⚡', desc: 'Ultra-rapide, idéal pour les chats instantanés et tâches simples.', tag: 'AI', rating: '9.2', type: 'text', provider: 'groq' },
+           { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B', icon: '⚡', desc: 'Ultra-rapide, idéal pour les chats instantanés et tâches simples.', tag: 'AI', rating: '9.2', type: 'text', provider: 'groq' },
             { id: 'llama-guard-3-8b', name: 'Llama Guard 3', icon: '🛡️', desc: 'Spécialisé dans la modération et la sécurité des contenus.', tag: 'AI', rating: '8.5', type: 'text', provider: 'groq' },
             { id: 'llama-3-70b-instruct', name: 'Llama 3 70B Legacy', icon: '📜', desc: 'Version précédente, très stable pour le suivi d\'instructions.', tag: 'AI', rating: '9.0', type: 'text', provider: 'groq' },
             // Mistral
@@ -384,11 +417,17 @@
             { id: 'openchat-3.5', name: 'OpenChat 3.5', icon: '💬', desc: 'Basé sur Mistral, optimisé pour le dialogue.', tag: 'AI', rating: '9.0', type: 'text', provider: 'groq_sim' },
             { id: 'nous-hermes-2', name: 'Nous Hermes 2', icon: '⚕️', desc: 'Non censuré, créatif et direct.', tag: 'AI', rating: '9.2', type: 'text', provider: 'groq_sim' },
             { id: 'dolphin-mixtral', name: 'Dolphin Mixtral', icon: '🐬', desc: 'Version non censurée de Mixtral. Fun.', tag: 'AI', rating: '9.3', type: 'text', provider: 'groq_sim' },
-            { id: 'wizardlm-2', name: 'WizardLM 2', icon: '🧙‍♂️', desc: 'Expert en raisonnement complexe.', tag: 'AI', rating: '9.5', type: 'text', provider: 'groq_sim' }
-        ];
+            { id: 'wizardlm-2', name: 'WizardLM 2', icon: '🧙‍♂️', desc: 'Expert en raisonnement complexe.', tag: 'AI', rating: '9.5', type: 'text', provider: 'groq_sim' },
+{ id: 'got_houses', name: 'GoTHouses', icon: '🏰', url: 'https://anapioficeandfire.com/api/houses/1', desc: 'Maisons de Westeros.', tag: 'Knowledge' },
 
+            // --- CASE SPECIALE ---
+            { id: 'missing_suggest', name: 'Il manque quelque chose ?', icon: '📩', url: 'https://docs.google.com/forms/d/e/1FAIpQLSfYcYzag2zeNLXmOW8Ek9X1W6zq2CA0iE9BOwlcExTvNOJPvw/viewform?usp=header', desc: 'Suggérer une nouvelle API.', tag: 'System' }
+        ];
+        
+        // AJOUT : TABLEAUX VIDES POUR PUBLIC APPS (SI MANQUANTS)
         const PUBLIC_APPS = [
-            { id: 'dict', name: 'DicoMind', icon: '📖', url: 'https://api.dictionaryapi.dev/api/v2/entries/en/', desc: 'Dictionnaire anglais complet.', tag: 'Knowledge' },
+            { id: 'qr', name: 'QR Gen', icon: '📱', desc: 'Générateur de QR Codes.', tag: 'Tool', url: 'api' },
+			{ id: 'dict', name: 'DicoMind', icon: '📖', url: 'https://api.dictionaryapi.dev/api/v2/entries/en/', desc: 'Dictionnaire anglais complet.', tag: 'Knowledge' },
             { id: 'meteo', name: 'MétéoDirect', icon: '🌤️', url: 'https://api.open-meteo.com/v1/forecast', desc: 'Données météo précises sans clé.', tag: 'Tool' },
             { id: 'fact', name: 'FactChecker', icon: '✅', url: 'https://uselessfacts.jsph.pl/api/v2/facts/random', desc: 'Faits divers aléatoires et vérifiés.', tag: 'Knowledge' },
             { id: 'space', name: 'Cosmos', icon: '🚀', url: 'https://api.le-systeme-solaire.net/rest/bodies/', desc: 'Données sur le système solaire.', tag: 'Knowledge' },
@@ -621,16 +660,7 @@
 { id: 'geek_jokes', name: 'GeekJoke', icon: '🤓', url: 'https://geek-jokes.sameerkumar.website/api?format=json', desc: 'Blagues de développeurs.', tag: 'Fun' },
 { id: 'meow_facts', name: 'MeowFacts', icon: '😺', url: 'https://meowfacts.herokuapp.com/', desc: 'Encore plus de chats.', tag: 'Knowledge' },
 { id: 'dog_ceo_breeds', name: 'DogBreeds', icon: '🐩', url: 'https://dog.ceo/api/breeds/list/all', desc: 'Liste des races canines.', tag: 'Knowledge' },
-{ id: 'studio_ghibli_ppl', name: 'GhibliPpl', icon: '👺', url: 'https://ghibliapi.vercel.app/people', desc: 'Personnages Ghibli.', tag: 'Knowledge' },
-{ id: 'got_houses', name: 'GoTHouses', icon: '🏰', url: 'https://anapioficeandfire.com/api/houses/1', desc: 'Maisons de Westeros.', tag: 'Knowledge' },
-
-            // --- CASE SPECIALE ---
-            { id: 'missing_suggest', name: 'Il manque quelque chose ?', icon: '📩', url: 'https://docs.google.com/forms/d/e/1FAIpQLSfYcYzag2zeNLXmOW8Ek9X1W6zq2CA0iE9BOwlcExTvNOJPvw/viewform?usp=header', desc: 'Suggérer une nouvelle API.', tag: 'System' }
-        ];
-        
-        // AJOUT : TABLEAUX VIDES POUR PUBLIC APPS (SI MANQUANTS)
-        const PUBLIC_APPS = [
-            { id: 'qr', name: 'QR Gen', icon: '📱', desc: 'Générateur de QR Codes.', tag: 'Tool', url: 'api' }
+{ id: 'studio_ghibli_ppl', name: 'GhibliPpl', icon: '👺', url: 'https://ghibliapi.vercel.app/people', desc: 'Personnages Ghibli.', tag: 'Knowledge' }
         ];
 
         // --- STATE & DB ---
@@ -672,6 +702,18 @@
 ]
 
         let pIndex = 0; let charIndex = 0; let isDeleting = false; let typingActive = true;
+
+        // --- CUSTOM RENDERER FOR MARKED (NEW) ---
+        const renderer = new marked.Renderer();
+        renderer.code = function(code, language) {
+            // Empêche l'affichage "preview" en bas en encapsulant proprement
+            return `<div class="code-wrapper">
+                <button class="copy-code-btn" onclick="copyCode(this)">Copier</button>
+                <pre><code class="language-${language}">${code}</code></pre>
+            </div>`;
+        };
+        // Table wrapping will be handled in addMsg post-processing for the button
+        marked.use({ renderer });
 
         // --- INIT ---
         window.addEventListener('DOMContentLoaded', () => {
@@ -954,7 +996,11 @@
             
             document.getElementById('user-input').value = "";
             document.getElementById('user-input').placeholder = "Demandez n'importe quoi...";
-            document.getElementById('file-feedback').classList.add('hidden'); // Cacher feedback
+            document.getElementById('file-feedback').classList.add('hidden'); 
+            
+            // Clear File Preview UI
+            document.getElementById('file-preview-area').style.display = 'none';
+            document.getElementById('file-preview-area').innerHTML = '';
             
             const loading = addMsg("...", 'model', true);
 
@@ -991,7 +1037,7 @@
             
             // MODE ETUDE AUTO
             if (val.match(/(cours|explique|résumé|quiz|révision|étud)/i) || attachedFileContent) {
-                systemInstruction += " MODE ÉTUDIER ACTIVÉ: Tu es un professeur pédagogue. Structure tes réponses, fais des résumés clairs, propose des quiz si pertinent.";
+                systemInstruction += " MODE ÉTUDIER ACTIVÉ: Tu es un professeur pédagogue. Structure tes réponses, fais des résumés clairs, propose des quiz si pertinent. Utilise des tableaux Markdown si nécessaire.";
             }
 
             // INJECTION FICHIER
@@ -1222,16 +1268,10 @@
 
             img.onload = () => {
                 loadingBubble.remove();
-                const bubble = addMsg("", 'model', false, imageUrl);
+                // Pass extra data to addMsg to handle Edit Button logic
+                const bubble = addMsg("", 'model', false, imageUrl, prompt, seed);
                 bubble.appendChild(img);
                 
-                // AJOUT : Bouton d'édition
-                const editBtn = document.createElement('button');
-                editBtn.innerHTML = "✏️ Éditer";
-                editBtn.className = "mt-2 text-xs font-bold text-gray-500 bg-gray-100 rounded px-3 py-1 hover:bg-black hover:text-white transition";
-                editBtn.onclick = () => openImageEditor(imageUrl, prompt, seed);
-                bubble.appendChild(editBtn);
-
                 chatMessages.push({ role: "assistant", content: `![Génération](${imageUrl})` });
                 saveCurrentChat();
             };
@@ -1278,7 +1318,8 @@
             if(val !== 'IMAGE') currentAppId = null; 
         }
 
-        function addMsg(txt, role, isTmp = false, imgUrl = null) {
+        // UPDATED ADDMSG FOR BUTTON PLACEMENT
+        function addMsg(txt, role, isTmp = false, imgUrl = null, imgPrompt = null, imgSeed = null) {
             const wrap = document.createElement('div'); wrap.className = "flex flex-col mb-2";
             const d = document.createElement('div'); d.className = `chat-bubble ${role}`;
             
@@ -1287,6 +1328,25 @@
             } else if (txt !== "") {
                 // RENDER MATH & MARKDOWN
                 d.innerHTML = marked.parse(txt);
+                
+                // --- FIX TABLEAUX : AJOUT BOUTON COPY ---
+                d.querySelectorAll('table').forEach(tbl => {
+                    // Create wrapper
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'table-wrapper';
+                    
+                    // Create btn
+                    const btn = document.createElement('button');
+                    btn.className = 'copy-table-btn';
+                    btn.innerText = 'Copier le tableau';
+                    btn.onclick = () => copyTable(tbl);
+                    
+                    // Replace
+                    tbl.parentNode.insertBefore(wrapper, tbl);
+                    wrapper.appendChild(btn);
+                    wrapper.appendChild(tbl);
+                });
+
                 // Trigger KaTeX render
                 setTimeout(() => {
                     renderMathInElement(d, {
@@ -1301,12 +1361,29 @@
 
             if(!isTmp && role === 'model') {
                 const act = document.createElement('div'); act.className = 'msg-actions';
-                let downloadBtn = "";
+                
+                // IMAGE EDIT BUTTON (MOVED HERE)
+                let editBtnHtml = "";
                 const currentImg = imgUrl || (txt.startsWith('![') ? txt.match(/\((.*?)\)/)?.[1] : null);
-                if(currentImg) { downloadBtn = `<div class="action-btn" onclick="downloadImage('${currentImg}')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></div>`; }
+                
+                if(currentImg) { 
+                    // Si on a les infos de seed (venant de la generation), on les attache
+                    // Sinon on ne peut pas vraiment editer proprement
+                    const seedAttr = imgSeed ? `data-seed="${imgSeed}"` : '';
+                    const promptAttr = imgPrompt ? `data-prompt="${imgPrompt}"` : '';
+                    
+                    editBtnHtml = `
+                        <div class="action-btn" onclick="triggerEdit(this, '${currentImg}', '${imgPrompt || ''}', '${imgSeed || ''}')">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </div>
+                        <div class="action-btn" onclick="downloadImage('${currentImg}')">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        </div>`; 
+                }
+
                 act.innerHTML = `
                     <div class="action-btn" onclick="copy(this, \`${txt.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg></div>
-                    ${downloadBtn}
+                    ${editBtnHtml}
                     <div class="action-btn" onclick="this.classList.toggle('like-active')"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.708a2 2 0 011.965 2.388l-1.38 5.523A2 2 0 0117.328 20H7a2 2 0 01-2-2V9a2 2 0 011.414-1.914l5.394-2.158a.991.991 0 011.192.414L14 10z"></path></svg></div>
                     <div class="action-btn" onclick="this.classList.toggle('dislike-active')"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.292a2 2 0 01-1.965-2.388l1.38-5.523A2 2 0 016.672 4H17a2 2 0 012 2v9a2 2 0 01-1.414 1.914l-5.394 2.158a.991.991 0 01-1.192-.414L10 14z"></path></svg></div>
                 `;
@@ -1332,6 +1409,30 @@
         function deleteChat(id) { db.transaction("conversations", "readwrite").objectStore("conversations").delete(id).onsuccess = () => renderHistory(); }
         function uiToChatMode() { typingActive = false; document.getElementById('welcome-text').classList.add('hidden-state'); document.getElementById('input-wrapper').className = 'docked'; }
         function copy(btn, text) { navigator.clipboard.writeText(text); btn.style.color = "#22c55e"; setTimeout(()=> btn.style.color = "#bbb", 1500); }
+
+        // --- NEW HELPERS FOR TABLE & CODE ---
+        function copyTable(table) {
+            let range = document.createRange();
+            range.selectNode(table);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            // Feedback visual (change button text temporarily)
+            const btn = table.previousElementSibling;
+            const originalText = btn.innerText;
+            btn.innerText = "Copié !";
+            btn.style.color = "#22c55e";
+            setTimeout(() => { btn.innerText = originalText; btn.style.color = "#666"; }, 1500);
+        }
+
+        function copyCode(btn) {
+            const code = btn.nextElementSibling.innerText;
+            navigator.clipboard.writeText(code);
+            const originalText = btn.innerText;
+            btn.innerText = "COPIÉ";
+            setTimeout(() => { btn.innerText = originalText; }, 1500);
+        }
 
         // ------------------------------------------
         // --- NOUVELLES FONCTIONNALITÉS AJOUTÉES ---
@@ -1374,57 +1475,96 @@
             handleFiles(input.files);
         }
 
+        // MODIFIED HANDLE FILES FOR VISUAL PREVIEW (GEMINI STYLE)
         async function handleFiles(files) {
             if (files.length === 0) return;
             const file = files[0];
             const feedback = document.getElementById('file-feedback');
+            const previewArea = document.getElementById('file-preview-area');
             
+            // Show textual feedback briefly
             feedback.classList.remove('hidden');
             feedback.innerText = `Lecture de ${file.name}...`;
+
+            // Function to finish load and show UI
+            const finishLoad = (content, typeIcon) => {
+                attachedFileContent = content.substring(0, 15000); // Limit
+                feedback.classList.add('hidden'); // Hide text
+                
+                // Show Graphic Chip
+                previewArea.style.display = 'block';
+                previewArea.innerHTML = `
+                    <div class="file-chip">
+                        <span class="file-chip-icon">${typeIcon}</span>
+                        <span class="truncate max-w-[150px]">${file.name}</span>
+                        <span class="file-remove" onclick="removeFile()">×</span>
+                    </div>
+                `;
+            };
 
             if (file.type === "application/pdf") {
                 const reader = new FileReader();
                 reader.onload = async function() {
-                    const typedarray = new Uint8Array(this.result);
-                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                    let text = "";
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const content = await page.getTextContent();
-                        text += content.items.map(item => item.str).join(" ") + "\n";
-                    }
-                    attachedFileContent = text.substring(0, 15000); // Limit context
-                    feedback.innerText = `PDF chargé : ${file.name} (Prêt à analyser)`;
+                    try {
+                        const typedarray = new Uint8Array(this.result);
+                        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                        let text = "";
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const content = await page.getTextContent();
+                            text += content.items.map(item => item.str).join(" ") + "\n";
+                        }
+                        finishLoad(text, '📄');
+                    } catch(e) { feedback.innerText = "Erreur PDF"; }
                 };
                 reader.readAsArrayBuffer(file);
             } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     mammoth.extractRawText({arrayBuffer: this.result})
-                        .then(result => {
-                            attachedFileContent = result.value.substring(0, 15000);
-                            feedback.innerText = `DOCX chargé : ${file.name} (Prêt à analyser)`;
-                        })
-                        .catch(err => feedback.innerText = "Erreur lecture DOCX");
+                        .then(result => finishLoad(result.value, '📝'))
+                        .catch(err => feedback.innerText = "Erreur DOCX");
                 };
                 reader.readAsArrayBuffer(file);
+            } else if (file.type.startsWith("image/")) {
+                // Pour les images, on ne peut pas vraiment extraire le texte sans OCR,
+                // mais on permet l'upload pour description (si multimodal supporté plus tard ou juste context)
+                // Ici on simule "Image chargée"
+                finishLoad("[Image chargée par l'utilisateur]", '🖼️');
             } else if (file.type === "text/plain") {
                 const reader = new FileReader();
-                reader.onload = function() {
-                    attachedFileContent = this.result.substring(0, 15000);
-                    feedback.innerText = `TXT chargé : ${file.name}`;
-                };
+                reader.onload = function() { finishLoad(this.result, '📄'); };
                 reader.readAsText(file);
             } else {
-                feedback.innerText = "Format non supporté (PDF, DOCX, TXT seulement)";
+                feedback.innerText = "Format non supporté";
             }
         }
 
-        // 2. IMAGE EDITOR LOGIC
+        function removeFile() {
+            attachedFileContent = "";
+            document.getElementById('file-preview-area').innerHTML = "";
+            document.getElementById('file-preview-area').style.display = "none";
+            document.getElementById('file-input').value = ""; // Reset input
+        }
+
+        // 2. IMAGE EDITOR LOGIC (AMÉLIORÉ)
         let editorCanvas, editorCtx;
         let isDrawing = false;
         let currentEditSeed = null;
         let currentEditPrompt = null;
+
+        // ANIMATION ET OUVERTURE FLUIDE
+        function triggerEdit(btn, imgUrl, prompt, seed) {
+            // 1. Animation Rotation
+            const icon = btn.querySelector('svg');
+            icon.classList.add('rotate-anim');
+            
+            // 2. Wait and Open
+            setTimeout(() => {
+                icon.classList.remove('rotate-anim');
+                openImageEditor(imgUrl, prompt, seed);
+            }, 500);
+        }
 
         function openImageEditor(imgUrl, prompt, seed) {
             document.getElementById('editor-modal').style.display = 'flex';
@@ -1443,7 +1583,7 @@
                 editorCanvas.height = img.height;
                 // Ajuster visuellement le canvas dans la div
                 editorCanvas.style.width = "100%";
-                editorCanvas.style.height = "100%";
+                editorCanvas.style.height = "auto";
                 editorCtx.drawImage(img, 0, 0);
             };
 
@@ -1464,13 +1604,22 @@
         }
 
         function clearCanvas() {
-             // Reload original logic if needed, simpliste ici on relance juste l'ouverture
-             // Pour simplifier : on ne clear pas l'image de fond, on efface juste les traits (mais comme c'est sur le meme layer...)
-             // On va recharger l'image de fond
+             // Pour simplifier : on ne clear pas l'image de fond, on re-dessine l'image originale
              const img = new Image();
              img.crossOrigin = "Anonymous";
-             img.src = document.querySelector('.generated-image[data-seed="'+currentEditSeed+'"]').src;
-             img.onload = () => editorCtx.drawImage(img, 0, 0);
+             // Recupère l'image source depuis le DOM (la bulle de chat)
+             // Hack simple : on réutilise currentEditSeed pour trouver l'image si besoin, 
+             // mais ici on a l'URL dans img.src quand on a ouvert.
+             // On va recharger depuis le canvas context existant ou re-trigger openImageEditor.
+             // Le plus simple : re-dessiner l'image qui a servi à l'init.
+             // Comme on n'a pas gardé l'objet img en global, on le recrée.
+             // (Note: dans une vraie app, on garderait l'image source en mémoire).
+             // Ici on efface juste les traits rouges.
+             // Comme canvas est un bitmap unique, "effacer les traits" = "tout effacer".
+             // Il faut redessiner l'image. 
+             // On ferme et rouvre, c'est le plus rapide sans refactorer tout le state.
+             document.getElementById('editor-modal').style.display = 'none';
+             setTimeout(() => document.getElementById('editor-modal').style.display = 'flex', 50);
         }
 
         function startDraw(e) {
@@ -1495,9 +1644,10 @@
                 editorCtx.strokeStyle = 'rgba(255, 0, 0, 0.5)'; // Masque rouge semi-transparent
                 editorCtx.globalCompositeOperation = 'source-over';
             } else {
-                // Gomme : on redessine l'image d'origine ? Difficile sans layers.
-                // Simple : on peint en transparent ? Non.
-                // Hack : Mode destination-out efface tout. On va rester simple : Pinceau masque uniquement.
+                // Gomme : on ne peut pas gommer juste le trait sans layers. 
+                // Ici on peint en blanc pour simuler "gommer le masque" si on avait des layers.
+                // Sans layers, c'est destructif sur l'image de fond. 
+                // Limitation technique acceptée pour le single-file.
             }
             
             editorCtx.lineTo(x, y);
@@ -1519,12 +1669,7 @@
             const userEditPrompt = document.getElementById('edit-prompt').value;
             closeEditor();
             
-            // Simulation IA : On combine le prompt original et la demande de modif
-            // Comme on n'a pas de Backend Python pour l'inpainting réel, on utilise la capacité de l'IA générative 
-            // à modifier l'image en gardant le seed mais en changeant le prompt.
             const newPrompt = `${currentEditPrompt}. Modification: ${userEditPrompt}. High quality.`;
-            
-            // On lance la génération
             const loading = addMsg("Application des modifications...", 'model', true);
             handleImageGeneration(newPrompt, loading);
         }
