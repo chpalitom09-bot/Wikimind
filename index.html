@@ -11,7 +11,7 @@
 </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WikiMind 4.5 - Masterclass Edition</title>
+    <title>WikiMind 4.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -23,6 +23,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
 
     <style>
         /* --- VARIABLES & BASE THEME (INCHANGÉ) --- */
@@ -153,9 +156,20 @@
         #welcome-text.hidden-state { opacity: 0; transform: translate(-50%, -80%); pointer-events: none; }
         
         /* --- UTILS --- */
-        .loader-spin { width: 24px; height: 24px; border: 3px solid #eee; border-top: 3px solid #000; border-radius: 50%; animation: spin 0.8s linear infinite; }
-        .dark-mode .loader-spin { border: 3px solid #333; border-top: 3px solid #fff; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* MODIFICATION ANIMATION (RÈGLE 2: LOGO QUI TOURNE) */
+        .loader-spin { 
+            width: 32px; height: 32px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='%23000' stroke-width='8'%3E%3Cpath d='M10 20 L25 80 L50 40 L75 80 L90 20' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center;
+            background-size: contain;
+            animation: spinLogo 1s linear infinite;
+            border: none; border-radius: 0;
+        }
+        .dark-mode .loader-spin {
+             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='%23fff' stroke-width='8'%3E%3Cpath d='M10 20 L25 80 L50 40 L75 80 L90 20' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+        }
+        @keyframes spinLogo { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* FIN MODIFICATION ANIMATION */
+
         .generated-image { width: 100%; border-radius: 16px; display: block; margin-top: 8px; }
         .history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-radius: 8px; cursor: pointer; color: #888; font-size: 11px; }
         .history-item:hover { background: var(--border); color: var(--text); }
@@ -187,6 +201,13 @@
         #editor-canvas { width: 100%; height: auto; border: 1px dashed var(--border); cursor: crosshair; touch-action: none; background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHBhdGggZD0iTTAgMGgxMHYxMEgwVjB6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTAgMGg1djVIMFYwek01IDVoNXY1SDVWNXoiIGZpbGw9IiNlZWUiLz48L3N2Zz4='); }
         .tool-btn { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; font-size: 12px; font-weight: bold; }
         .tool-btn.active { background: var(--text); color: var(--bg); }
+
+        /* MERMAID STYLE (RÈGLE 6) */
+        .mermaid { margin: 1em 0; background: var(--bg); padding: 10px; border-radius: 8px; overflow-x: auto; text-align: center; }
+        
+        /* MULTIVERSE STYLE (RÈGLE 7) */
+        .chat-bubble.persona-a { color: #007bff; border-left: 3px solid #007bff; border-right: none; margin-right: auto; }
+        .chat-bubble.persona-b { color: #e83e8c; border-left: 3px solid #e83e8c; border-right: none; margin-left: auto; text-align: left; }
     </style>
 </head>
 <body>
@@ -380,11 +401,15 @@
             { id: 'explore', name: 'WikiMind Explore', icon: '🌍', desc: 'Encyclopédie vivante connectée à Wikipedia en temps réel.', tag: 'Knowledge', system: "Tu es WikiMind Explore. Tu DOIS utiliser l'outil Wikipedia pour répondre aux questions factuelles. Réponds avec précision.", modes: ['RAPIDE', 'RÉFLÉCHI'] },
             { id: 'soundmind', name: 'SoundMind', icon: '🎵', desc: 'Expert musical et culturel. Biographie, discographies, tendances.', tag: 'Music', system: "Tu es SoundMind. Tu es un expert musical connecté à Last.fm. Parle de musique avec passion.", modes: ['RAPIDE', 'RÉFLÉCHI'] },
             { id: 'studymind', name: 'StudyMind 2.0', icon: '🎓', desc: 'Assistant académique avancé. Recherche livres, données et quiz.', tag: 'Education', system: "Tu es StudyMind. Tu aides les étudiants. Tu utilises OpenLibrary et Wikidata pour structurer tes réponses.", modes: ['RAPIDE', 'RÉFLÉCHI'] },
-            { id: 'futuremind', name: 'FutureMind', icon: '🚀', desc: 'Coach orientation et avenir. Analyse de profil et suggestions métiers.', tag: 'Career', system: "Tu es FutureMind. Tu es un conseiller d'orientation bienveillant. Tu dois poser des questions pour comprendre le profil avant de suggérer des métiers.", modes: ['RÉFLÉCHI'] }
+            { id: 'futuremind', name: 'FutureMind', icon: '🚀', desc: 'Coach orientation et avenir. Analyse de profil et suggestions métiers.', tag: 'Career', system: "Tu es FutureMind. Tu es un conseiller d'orientation bienveillant. Tu dois poser des questions pour comprendre le profil avant de suggérer des métiers.", modes: ['RÉFLÉCHI'] },
+            // AJOUT RÈGLE 7: MULTIVERS
+            { id: 'multivers', name: 'Multivers', icon: '🎙️', desc: 'Fais débattre deux IA expertes sur un sujet complexe.', tag: 'System', system: "Tu es le modérateur du Multivers.", modes: ['AUTO'] }
         ];
 
         // NOUVEAU : BASE DE DONNÉES IA (25 Modèles)
         const AI_MODELS = [
+             // AJOUT RÈGLE 2: AUTO-GPT
+            { id: 'auto_gpt', name: 'AgentMind (Auto)', icon: '🌐', desc: 'Agent autonome. Planifie et exécute des tâches complexes.', tag: 'AI', rating: '9.9', type: 'text', provider: 'groq' },
             // Meta (Llama)
             { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', icon: '🦙', desc: 'Le modèle open-source le plus puissant de Meta. Polyvalence extrême.', tag: 'AI', rating: '9.8', type: 'text', provider: 'groq' },
            { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B', icon: '⚡', desc: 'Ultra-rapide, idéal pour les chats instantanés et tâches simples.', tag: 'AI', rating: '9.2', type: 'text', provider: 'groq' },
@@ -670,6 +695,9 @@
         let currentFilter = 'all';
         let attachedFileContent = ""; // GLOBAL POUR FICHIERS
 
+        // AJOUT RÈGLE 5: MEMOIRE
+        let userMemory = JSON.parse(localStorage.getItem('user_profile')) || [];
+
         const placeholders = [
   "Explique-moi l’intelligence artificielle simplement.",
   "Donne-moi une anecdote scientifique étonnante.",
@@ -706,6 +734,10 @@
         // --- CUSTOM RENDERER FOR MARKED (NEW) ---
         const renderer = new marked.Renderer();
         renderer.code = function(code, language) {
+            // AJOUT RÈGLE 6: RENDER MERMAID
+            if (language === 'mermaid') {
+                return `<div class="mermaid">${code}</div>`;
+            }
             // Empêche l'affichage "preview" en bas en encapsulant proprement
             return `<div class="code-wrapper">
                 <button class="copy-code-btn" onclick="copyCode(this)">Copier</button>
@@ -957,6 +989,9 @@
                         chatMessages.push({role: "assistant", content: "Bonjour ! Je suis FutureMind. Quel âge as-tu et en quelle classe es-tu ?"});
                     } else if(appId === 'soundmind') {
                         addMsg("Salut ! SoundMind à l'écoute. On parle de quel artiste ou genre aujourd'hui ?", 'model');
+                    } else if(appId === 'multivers') {
+                        // AJOUT RÈGLE 7: MESSAGE D'ACCUEIL MULTIVERS
+                        addMsg("Bienvenue dans le Multivers. Définis les deux participants (ex: 'Un expert IA vs Un philosophe') et le sujet du débat.", 'model');
                     } else if (AI_MODELS.find(a=>a.id===appId)) {
                         const m = AI_MODELS.find(a=>a.id===appId);
                         addMsg(`**${m.name}** initialisé.\n${m.desc}\nJe suis prêt.`, 'model');
@@ -1002,7 +1037,7 @@
             document.getElementById('file-preview-area').style.display = 'none';
             document.getElementById('file-preview-area').innerHTML = '';
             
-            const loading = addMsg("...", 'model', true);
+            const loading = addMsg("", 'model', true); // Le loader utilisera maintenant le logo CSS
 
             // 1. ROUTEUR APPS (OFFICIAL, PUBLIC, AI MODELS)
             if (currentAppId) {
@@ -1025,8 +1060,27 @@
                 return;
             }
 
+            // AJOUT RÈGLE 3: SCRAPING AUTO
+            const urlMatch = val.match(/(https?:\/\/[^\s]+)/g);
+            let scrapedContent = "";
+            if (urlMatch) {
+                try {
+                    loading.innerText = "...Analyse URL...";
+                    const targetUrl = urlMatch[0];
+                    // Proxy AllOrigins pour contourner CORS et obtenir le contenu
+                    const scrapeRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`);
+                    const scrapeData = await scrapeRes.json();
+                    if (scrapeData.contents) {
+                        // Extraction basique du texte (on retire les balises HTML)
+                        const textContent = scrapeData.contents.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<[^>]+>/g, ' ').substring(0, 5000);
+                        scrapedContent = `\n[CONTENU URL ANALYSÉ (${targetUrl})]: ${textContent}\n`;
+                    }
+                } catch(e) { console.log("Scraping error", e); }
+                loading.innerHTML = ""; // Reset loader visual
+            }
+
             // Standard Groq Call
-            let contextBoost = "";
+            let contextBoost = scrapedContent;
             if (val.toLowerCase().includes('actu') || val.toLowerCase().includes('news')) {
                 const nData = await fetchNews(val);
                 if(nData) contextBoost += `\n[News Context]: ${nData}`;
@@ -1035,6 +1089,12 @@
             // AJOUT: INJECTION DU DOCUMENT ET MODE ETUDE
             let systemInstruction = `Tu es WikiMind. Tom Duval est ton créateur voici sa description : Lycéen en Terminale et Maker passionné. 🛠️ Mon univers ? Créer des sites web fluides, modéliser et imprimer des objets en 3D, et explorer le monde à travers l'objectif d'un drone. Entre code, mécanique et altitude, j'aime transformer les idées abstraites en projets concrets. Toujours sur un nouveau projet, n'hésite pas à me contacter pour discuter tech !. Tu es poli, intelligent et utile. Utilise Markdown pour les tableaux et listes. Utilise LaTeX (encadré par $$ ou \\( \\)) pour les maths.`;
             
+            // AJOUT RÈGLE 5: INJECTION MÉMOIRE DANS LE SYSTÈME
+            if (userMemory.length > 0) {
+                systemInstruction += `\n[MÉMOIRE LONG TERME]: Voici ce que tu sais sur l'utilisateur : ${userMemory.join('; ')}. Utilise ces infos pour personnaliser la réponse.`;
+            }
+            systemInstruction += `\nSi l'utilisateur partage un fait personnel important (nom, préférence, projet), ajoute le à la fin de ta réponse dans un bloc caché ainsi : [[MEMORY: le fait à retenir]].`;
+
             // MODE ETUDE AUTO
             if (val.match(/(cours|explique|résumé|quiz|révision|étud)/i) || attachedFileContent) {
                 systemInstruction += " MODE ÉTUDIER ACTIVÉ: Tu es un professeur pédagogue. Structure tes réponses, fais des résumés clairs, propose des quiz si pertinent. Utilise des tableaux Markdown si nécessaire.";
@@ -1061,7 +1121,19 @@
                     })
                 });
                 const data = await res.json();
-                const reply = data.choices[0].message.content;
+                let reply = data.choices[0].message.content;
+                
+                // AJOUT RÈGLE 5: EXTRACTION MÉMOIRE
+                const memMatch = reply.match(/\[\[MEMORY: (.*?)\]\]/);
+                if (memMatch) {
+                    const newFact = memMatch[1];
+                    if (!userMemory.includes(newFact)) {
+                        userMemory.push(newFact);
+                        localStorage.setItem('user_profile', JSON.stringify(userMemory));
+                    }
+                    reply = reply.replace(memMatch[0], ''); // On cache le tag technique
+                }
+
                 loading.remove();
                 addMsg(reply, 'model');
                 chatMessages.push({ role: "assistant", content: reply });
@@ -1083,7 +1155,19 @@
             let systemContext = "";
             let externalData = "";
 
-            // A. LOGIQUE MODÈLES IA (NOUVEAU)
+            // AJOUT RÈGLE 2: AUTO-GPT LOGIQUE
+            if (appId === 'auto_gpt') {
+                await handleAutoGPT(userText, loadingBubble);
+                return;
+            }
+
+            // AJOUT RÈGLE 7: LOGIQUE MULTIVERS
+            if (appId === 'multivers') {
+                await handleMultiverse(userText, loadingBubble);
+                return;
+            }
+
+            // A. LOGIQUE MODÈLES IA (INCHANGÉ + NOUVEAU AGENT)
             const aiModel = AI_MODELS.find(a => a.id === appId);
             if (aiModel) {
                 // Routage intelligent : Mistral API ou Groq Gateway
@@ -1197,12 +1281,131 @@
             }
         }
 
+        // --- NOUVELLES FONCTIONS LOGIQUES (RÈGLES 2 & 7) ---
+
+        async function handleAutoGPT(goal, loadingBubble) {
+            // Étape 1 : Groq planifie
+            loadingBubble.innerText = "Planification en cours (Groq)...";
+            const planPrompt = `Tu es AgentMind. Ton but est de planifier la demande : "${goal}". 
+            Réponds UNIQUEMENT avec un JSON valide sous la forme : {"steps": ["étape 1", "étape 2", "étape 3"]}. Maximum 5 étapes.`;
+            
+            let steps = [];
+            try {
+                const planRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEYS.GROQ}` },
+                    body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{role: "system", content: "JSON only"}, {role: "user", content: planPrompt}], response_format: {type: "json_object"} })
+                });
+                const planData = await planRes.json();
+                steps = JSON.parse(planData.choices[0].message.content).steps;
+            } catch(e) {
+                loadingBubble.innerText = "Erreur Planification.";
+                return;
+            }
+
+            loadingBubble.remove();
+            addMsg(`📋 **Plan généré :**\n${steps.map((s,i) => `${i+1}. ${s}`).join('\n')}`, 'model');
+            
+            // Étape 2 : Mistral Exécute
+            let context = `Objectif global: ${goal}.\n`;
+            for (let i = 0; i < steps.length; i++) {
+                const step = steps[i];
+                const stepLoader = addMsg(`⚙️ Exécution étape ${i+1}/${steps.length}...`, 'model', true);
+                
+                try {
+                    // Utilisation de Mistral pour l'exécution
+                    const stepRes = await fetch("https://api.mistral.ai/v1/chat/completions", {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEYS.MISTRAL}` },
+                        body: JSON.stringify({ 
+                            model: "mistral-large-latest",
+                            messages: [
+                                {role: "system", content: "Tu es un agent exécutant. Sois concis et précis."},
+                                {role: "user", content: `Contexte: ${context}\n\nTÂCHE ACTUELLE: ${step}. Exécute cette tâche maintenant.`}
+                            ]
+                        })
+                    });
+                    const stepData = await stepRes.json();
+                    const result = stepData.choices[0].message.content;
+                    
+                    stepLoader.remove();
+                    addMsg(`**${i+1}. ${step}**\n\n${result}`, 'model');
+                    context += `\n[Résultat Étape ${i+1}]: ${result}`;
+                } catch(e) {
+                    stepLoader.innerText = "Erreur exécution étape.";
+                }
+            }
+            addMsg("✅ **Mission terminée.**", 'model');
+        }
+
+        async function handleMultiverse(setup, loadingBubble) {
+            // Setup simple : User dit "Batman vs Joker sur la justice"
+            loadingBubble.innerText = "Initialisation du Multivers...";
+            
+            // 1. Identifier les personas
+            const setupRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEYS.GROQ}` },
+                body: JSON.stringify({ 
+                    model: "llama-3.3-70b-versatile", 
+                    messages: [{role: "system", content: "JSON output: {p1: 'Nom1', p2: 'Nom2', topic: 'Sujet'}"}, {role: "user", content: `Analyse ceci pour un débat : ${setup}`}],
+                    response_format: {type: "json_object"}
+                })
+            });
+            const setupData = await setupRes.json();
+            const config = JSON.parse(setupData.choices[0].message.content);
+            loadingBubble.remove();
+            
+            addMsg(`⚔️ **DÉBAT LANCÉ : ${config.p1} VS ${config.p2}**\nSujet : ${config.topic}`, 'model');
+            
+            let exchangeHistory = "";
+            let turns = 2; // Nombre d'échanges (A->B->A->B)
+            
+            for(let i=0; i<turns*2; i++) {
+                const isP1 = i % 2 === 0;
+                const currentSpeaker = isP1 ? config.p1 : config.p2;
+                const otherSpeaker = isP1 ? config.p2 : config.p1;
+                
+                const turnLoader = addMsg(`🎙️ ${currentSpeaker} réfléchit...`, 'model', true);
+                
+                const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEYS.GROQ}` },
+                    body: JSON.stringify({ 
+                        model: "llama-3.3-70b-versatile", 
+                        messages: [
+                            {role: "system", content: `Tu es ${currentSpeaker}. Tu débats avec ${otherSpeaker} sur : ${config.topic}. Sois incisif, court (max 50 mots) et dans le personnage.`},
+                            {role: "user", content: `Historique du débat:\n${exchangeHistory}\n\nÀ toi de parler.`}
+                        ]
+                    })
+                });
+                const data = await res.json();
+                const reply = data.choices[0].message.content;
+                
+                turnLoader.remove();
+                
+                // Style spécifique Multivers
+                const bubble = addMsg(`**${currentSpeaker}:** ${reply}`, 'model');
+                bubble.firstChild.classList.remove('model');
+                bubble.firstChild.classList.add(isP1 ? 'persona-a' : 'persona-b');
+                bubble.firstChild.classList.add('chat-bubble');
+                
+                exchangeHistory += `\n${currentSpeaker}: ${reply}`;
+                await new Promise(r => setTimeout(r, 1500)); // Pause pour lecture
+            }
+        }
+
         // --- API CALLERS ---
         async function callGroq(userMsg, systemMsg, loadingBubble, specificModel = "llama-3.3-70b-versatile") {
             try {
                 // ADDED: FILE CONTENT INJECTION
                 if(attachedFileContent) {
                     systemMsg += `\n[CONTEXTE FICHIER]: ${attachedFileContent}`;
+                }
+                
+                // AJOUT RÈGLE 5: MEMOIRE (Déjà injectée dans send(), mais rappel ici si appel direct)
+                if(userMemory.length > 0 && !systemMsg.includes("MÉMOIRE")) {
+                     systemMsg += `\n[MÉMOIRE]: ${userMemory.join('; ')}`;
                 }
 
                 const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -1218,7 +1421,19 @@
                 });
                 const data = await res.json();
                 if(data.error) throw new Error(data.error.message);
-                const reply = data.choices[0].message.content;
+                let reply = data.choices[0].message.content;
+                
+                // AJOUT RÈGLE 5: CHECK MEMORY
+                const memMatch = reply.match(/\[\[MEMORY: (.*?)\]\]/);
+                if (memMatch) {
+                    const newFact = memMatch[1];
+                    if (!userMemory.includes(newFact)) {
+                        userMemory.push(newFact);
+                        localStorage.setItem('user_profile', JSON.stringify(userMemory));
+                    }
+                    reply = reply.replace(memMatch[0], '');
+                }
+
                 loadingBubble.remove();
                 addMsg(reply, 'model');
                 chatMessages.push({ role: "assistant", content: reply });
@@ -1324,11 +1539,20 @@
             const d = document.createElement('div'); d.className = `chat-bubble ${role}`;
             
             if(isTmp) {
-                d.innerHTML = txt; 
+                d.innerHTML = (role === 'model') ? `<div class="loader-spin"></div>` : txt; // Utilise le nouveau loader logo
+                if(txt && role === 'model') {
+                    // Si texte + loader (ex: AutoGPT steps)
+                    d.innerHTML = `<div class="flex items-center gap-2"><div class="loader-spin" style="width:20px;height:20px;"></div><span>${txt}</span></div>`;
+                }
             } else if (txt !== "") {
                 // RENDER MATH & MARKDOWN
                 d.innerHTML = marked.parse(txt);
                 
+                // AJOUT RÈGLE 6: INITIALISER MERMAID
+                if (d.querySelector('.mermaid')) {
+                    mermaid.init(undefined, d.querySelectorAll('.mermaid'));
+                }
+
                 // --- FIX TABLEAUX : AJOUT BOUTON COPY ---
                 d.querySelectorAll('table').forEach(tbl => {
                     // Create wrapper
@@ -1527,10 +1751,17 @@
                 };
                 reader.readAsArrayBuffer(file);
             } else if (file.type.startsWith("image/")) {
-                // Pour les images, on ne peut pas vraiment extraire le texte sans OCR,
-                // mais on permet l'upload pour description (si multimodal supporté plus tard ou juste context)
-                // Ici on simule "Image chargée"
-                finishLoad("[Image chargée par l'utilisateur]", '🖼️');
+                // AJOUT RÈGLE 9: OCR VIA TESSERACT
+                feedback.innerText = "Analyse OCR de l'image...";
+                Tesseract.recognize(
+                    file,
+                    'fra',
+                    { logger: m => console.log(m) }
+                ).then(({ data: { text } }) => {
+                    finishLoad(text || "[Texte illisible]", '🖼️');
+                }).catch(e => {
+                    finishLoad("[Image sans texte]", '🖼️');
+                });
             } else if (file.type === "text/plain") {
                 const reader = new FileReader();
                 reader.onload = function() { finishLoad(this.result, '📄'); };
@@ -1607,17 +1838,6 @@
              // Pour simplifier : on ne clear pas l'image de fond, on re-dessine l'image originale
              const img = new Image();
              img.crossOrigin = "Anonymous";
-             // Recupère l'image source depuis le DOM (la bulle de chat)
-             // Hack simple : on réutilise currentEditSeed pour trouver l'image si besoin, 
-             // mais ici on a l'URL dans img.src quand on a ouvert.
-             // On va recharger depuis le canvas context existant ou re-trigger openImageEditor.
-             // Le plus simple : re-dessiner l'image qui a servi à l'init.
-             // Comme on n'a pas gardé l'objet img en global, on le recrée.
-             // (Note: dans une vraie app, on garderait l'image source en mémoire).
-             // Ici on efface juste les traits rouges.
-             // Comme canvas est un bitmap unique, "effacer les traits" = "tout effacer".
-             // Il faut redessiner l'image. 
-             // On ferme et rouvre, c'est le plus rapide sans refactorer tout le state.
              document.getElementById('editor-modal').style.display = 'none';
              setTimeout(() => document.getElementById('editor-modal').style.display = 'flex', 50);
         }
@@ -1644,10 +1864,6 @@
                 editorCtx.strokeStyle = 'rgba(255, 0, 0, 0.5)'; // Masque rouge semi-transparent
                 editorCtx.globalCompositeOperation = 'source-over';
             } else {
-                // Gomme : on ne peut pas gommer juste le trait sans layers. 
-                // Ici on peint en blanc pour simuler "gommer le masque" si on avait des layers.
-                // Sans layers, c'est destructif sur l'image de fond. 
-                // Limitation technique acceptée pour le single-file.
             }
             
             editorCtx.lineTo(x, y);
@@ -1695,6 +1911,9 @@
             
             addMsg("📄 Document PDF généré et téléchargé.", 'model');
         }
+
+        // --- MERMAID INIT (RÈGLE 6) ---
+        mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
 
     </script>
     
