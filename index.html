@@ -16,15 +16,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
+    <!-- PDF & Canvas Tools -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- Math & Charts -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
 
     <style>
@@ -195,6 +199,8 @@
         .pro-reasoning summary::after { content: '▼'; font-size: 8px; transition: 0.2s; margin-left: auto; }
         .pro-reasoning[open] summary::after { transform: rotate(180deg); }
         .pro-content { margin-top: 10px; font-size: 0.9em; color: var(--text); opacity: 0.8; padding-left: 8px; border-left: 2px solid #ccc; white-space: pre-wrap; }
+
+        .chart-container { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin: 10px 0; }
 
     </style>
 </head>
@@ -668,6 +674,13 @@
             if (language === 'mermaid') {
                 return `<div class="mermaid">${code}</div>`;
             }
+            // Détection Chart.js
+            if (language === 'json' && code.includes('"isChart": true')) {
+                 const id = 'chart-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+                 setTimeout(() => renderChart(id, code), 200);
+                 return `<div class="chart-container" style="position: relative; height:300px; width:100%"><canvas id="${id}"></canvas></div>`;
+            }
+
             return `<div class="code-wrapper">
                 <button class="copy-code-btn" onclick="copyCode(this)">Copier</button>
                 <pre><code class="language-${language}">${code}</code></pre>
@@ -990,8 +1003,16 @@
                 if(nData) contextBoost += `\n[News Context]: ${nData}`;
             }
 
-            // RÈGLE 5 : IDENTITÉ SILENCIEUSE
-            let systemInstruction = `Tu es WikiMind. (Ne mentionne "Tom Duval" QUE si explicitement demandé ou pour des crédits administratifs). Tu es poli, intelligent et utile. Utilise Markdown pour les tableaux et listes. Utilise LaTeX (encadré par $$ ou \\( \\)) pour les maths.`;
+            // RÈGLE 5 : IDENTITÉ SILENCIEUSE + Prompt Système mis à jour
+            let systemInstruction = `Tu es WikiMind. (Ne mentionne "Tom Duval" QUE si explicitement demandé ou pour des crédits administratifs). Tu es poli, intelligent et utile. 
+            Utilise Markdown pour les tableaux et listes.
+            IMPORTANT : 
+            1. Utilise $...$ pour les formules mathématiques en ligne (ex: $E=mc^2$) et $$...$$ pour les blocs mathématiques.
+            2. Si tu dois générer un graphique, utilise le bloc de code JSON suivant en remplaçant les données:
+            \`\`\`json
+            { "isChart": true, "type": "bar", "data": { "labels": ["A","B"], "datasets": [{ "label": "Exemple", "data": [10, 20] }] } }
+            \`\`\`
+            3. Si on te demande de générer un PDF/Document, structure bien avec des titres # (H1) et ## (H2) pour que je puisse générer un sommaire automatique.`;
             
             if (userMemory.length > 0) {
                 systemInstruction += `\n[MÉMOIRE LONG TERME]: Voici ce que tu sais sur l'utilisateur : ${userMemory.join('; ')}. Utilise ces infos pour personnaliser la réponse (ne dis jamais que tu as mémorisé).`;
@@ -1006,7 +1027,7 @@
                 contextBoost += `\n[DOCUMENT UTILISATEUR]: ${attachedFileContent}\nUtilise ce contenu pour répondre.`;
             }
 
-            let isDocGen = val.match(/(génère|crée|exporte).*(pdf|document)/i);
+            let isDocGen = val.match(/(génère|crée|exporte).*(pdf|document|rapport)/i);
 
             try {
                 const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -1034,11 +1055,11 @@
                 }
 
                 loading.remove();
-                addMsg(reply, 'model');
+                const bubble = addMsg(reply, 'model'); // Capture element for PDF
                 chatMessages.push({ role: "assistant", content: reply });
                 
                 if(isDocGen) {
-                   generatePDF(reply);
+                   setTimeout(() => generatePDF(bubble), 1000); // Wait for charts/math to render
                 }
 
                 saveCurrentChat();
@@ -1524,11 +1545,14 @@
                     wrapper.appendChild(tbl);
                 });
 
+                // KAtex Configuration (Règle 4)
                 setTimeout(() => {
                     renderMathInElement(d, {
                         delimiters: [
                             {left: '$$', right: '$$', display: true},
-                            {left: '\\(', right: '\\)', display: false}
+                            {left: '$', right: '$', display: false},
+                            {left: '\\(', right: '\\)', display: false},
+                            {left: '\\[', right: '\\]', display: true}
                         ]
                     });
                 }, 10);
@@ -1800,20 +1824,70 @@
             handleImageGeneration(newPrompt, loading);
         }
 
-        function generatePDF(content) {
+        function renderChart(id, code) {
+            try {
+                const ctx = document.getElementById(id).getContext('2d');
+                let config = JSON.parse(code);
+                // Basic check structure ChartJS
+                if (config.data && config.type) {
+                   new Chart(ctx, config);
+                }
+            } catch (e) { console.error("Chart error", e); }
+        }
+
+        // RÈGLE 1 & 3 : PDF HAUTE FIDÉLITÉ + SOMMAIRE AUTO
+        async function generatePDF(element) {
+            if(!element) return;
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.setFont("helvetica");
-            doc.setFontSize(12);
-            const lines = doc.splitTextToSize(content.replace(/\*\*/g, '').replace(/#/g, ''), 180);
-            let y = 10;
-            lines.forEach(line => {
-                if (y > 280) { doc.addPage(); y = 10; }
-                doc.text(line, 10, y);
-                y += 7;
-            });
-            doc.save(`WikiMind_Doc_${Date.now()}.pdf`);
-            addMsg("📄 Document PDF généré et téléchargé.", 'model');
+            
+            // 1. Extraire les titres pour le sommaire
+            const headers = Array.from(element.querySelectorAll('h1, h2, h3'));
+            let tocData = headers.map(h => ({
+                text: h.innerText,
+                level: parseInt(h.tagName[1])
+            }));
+
+            // 2. Capture Haute Fidélité via HTML2Canvas
+            const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+            const imgData = canvas.toDataURL('image/png');
+            
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            
+            // 3. Page de Sommaire (si titres présents)
+            if(tocData.length > 0) {
+                pdf.setFontSize(22);
+                pdf.text("Sommaire du Document", 10, 20);
+                pdf.setFontSize(12);
+                let y = 35;
+                tocData.forEach((item, index) => {
+                    const indent = (item.level - 1) * 10;
+                    pdf.text(`${index + 1}. ${item.text}`, 10 + indent, y);
+                    y += 8;
+                });
+                pdf.addPage();
+            }
+
+            // 4. Ajout de l'image du contenu (en la découpant si trop longue)
+            const imgProps = pdf.getImageProperties(imgData);
+            const pdfHeight = (imgProps.height * pageWidth) / imgProps.width;
+            
+            let heightLeft = pdfHeight;
+            let position = 0;
+            
+            pdf.addImage(imgData, 'PNG', 0, position, pageWidth, pdfHeight);
+            heightLeft -= pageHeight;
+
+            while (heightLeft >= 0) {
+                position = heightLeft - pdfHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, pageWidth, pdfHeight);
+                heightLeft -= pageHeight;
+            }
+
+            pdf.save(`WikiMind_Doc_${Date.now()}.pdf`);
+            addMsg("📄 Document PDF Haute Fidélité généré.", 'model');
         }
 
         mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
