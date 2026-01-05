@@ -11,7 +11,7 @@
 </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WikiMind 4.5</title>
+    <title>WikiMind 4.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -208,6 +208,17 @@
 
     <div id="transition-overlay">
         <div id="transition-text">WikiMind APP</div>
+    </div>
+
+    <!-- ONBOARDING MODAL -->
+    <div id="onboarding-modal" class="modal" style="z-index: 200;">
+        <div class="modal-content text-center" onclick="event.stopPropagation()">
+            <h3 class="text-2xl font-black mb-4 uppercase tracking-tighter">Bienvenue</h3>
+            <p class="text-gray-500 mb-6 text-sm">Pour personnaliser votre expérience, comment doit-on vous appeler ?</p>
+            <input type="text" id="user-firstname" placeholder="Prénom" class="w-full p-3 border border-gray-200 rounded-lg mb-3 bg-transparent text-sm">
+            <input type="text" id="user-lastname" placeholder="Nom" class="w-full p-3 border border-gray-200 rounded-lg mb-6 bg-transparent text-sm">
+            <button onclick="saveIdentity()" class="w-full bg-black text-white dark:bg-white dark:text-black py-3 rounded-xl font-bold text-xs uppercase tracking-widest">Commencer</button>
+        </div>
     </div>
 
     <div id="settings-modal" class="modal" onclick="this.style.display='none'">
@@ -689,11 +700,40 @@
         marked.use({ renderer });
 
         window.addEventListener('DOMContentLoaded', () => {
+            initOnboarding();
             animatePlaceholder();
             renderLibrary();
             initSuggestionTicker();
             initDragAndDrop();
         });
+
+        // --- ONBOARDING LOGIC ---
+        function initOnboarding() {
+            const id = localStorage.getItem('wikimind_user_identity');
+            if(!id) {
+                document.getElementById('onboarding-modal').style.display = 'flex';
+            } else {
+                updateWelcomeMessage();
+            }
+        }
+
+        function saveIdentity() {
+            const f = document.getElementById('user-firstname').value.trim();
+            const l = document.getElementById('user-lastname').value.trim();
+            if(f && l) {
+                localStorage.setItem('wikimind_user_identity', JSON.stringify({first: f, last: l}));
+                document.getElementById('onboarding-modal').style.display = 'none';
+                updateWelcomeMessage();
+            }
+        }
+
+        function updateWelcomeMessage() {
+            const id = JSON.parse(localStorage.getItem('wikimind_user_identity'));
+            if(id) {
+                const welcome = document.querySelector('#welcome-text p');
+                welcome.innerHTML = `Bienvenue <span class="font-bold text-black dark:text-white">${id.first}</span>, comment puis-je vous aider <span class="font-bold">?</span>`;
+            }
+        }
 
         // --- LIBRARY SYSTEM ---
         function getFavorites() {
@@ -1014,6 +1054,12 @@
             \`\`\`
             3. Si on te demande de générer un PDF/Document, structure bien avec des titres # (H1) et ## (H2) pour que je puisse générer un sommaire automatique.`;
             
+            // INJECTION IDENTITÉ (FEATURE 2)
+            const identity = JSON.parse(localStorage.getItem('wikimind_user_identity'));
+            if(identity) {
+                systemInstruction += ` Tu t'adresses à ${identity.first} ${identity.last}.`;
+            }
+
             if (userMemory.length > 0) {
                 systemInstruction += `\n[MÉMOIRE LONG TERME]: Voici ce que tu sais sur l'utilisateur : ${userMemory.join('; ')}. Utilise ces infos pour personnaliser la réponse (ne dis jamais que tu as mémorisé).`;
             }
@@ -1665,15 +1711,21 @@
             feedback.classList.remove('hidden');
             feedback.innerText = `Lecture de ${file.name}...`;
 
-            const finishLoad = (content, typeIcon) => {
+            const finishLoad = (content, typeIcon, imgBase64 = null) => {
                 attachedFileContent = content.substring(0, 15000);
                 feedback.classList.add('hidden'); 
                 
+                let editBtn = '';
+                if(imgBase64) {
+                    editBtn = `<span class="cursor-pointer ml-2 text-blue-500 font-bold hover:text-blue-700" onclick="openImageEditor('${imgBase64}', '', null)">✏️ Éditer</span>`;
+                }
+
                 previewArea.style.display = 'block';
                 previewArea.innerHTML = `
                     <div class="file-chip">
                         <span class="file-chip-icon">${typeIcon}</span>
                         <span class="truncate max-w-[150px]">${file.name}</span>
+                        ${editBtn}
                         <span class="file-remove" onclick="removeFile()">×</span>
                     </div>
                 `;
@@ -1705,11 +1757,17 @@
                 reader.readAsArrayBuffer(file);
             } else if (file.type.startsWith("image/")) {
                 feedback.innerText = "Analyse OCR de l'image...";
-                Tesseract.recognize(file, 'fra').then(({ data: { text } }) => {
-                    finishLoad(text || "[Texte illisible]", '🖼️');
-                }).catch(e => {
-                    finishLoad("[Image sans texte]", '🖼️');
-                });
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                     const base64 = e.target.result;
+                     Tesseract.recognize(file, 'fra').then(({ data: { text } }) => {
+                        finishLoad(text || "[Texte illisible]", '🖼️', base64);
+                    }).catch(e => {
+                        finishLoad("[Image sans texte]", '🖼️', base64);
+                    });
+                };
+                reader.readAsDataURL(file);
+                
             } else if (file.type === "text/plain") {
                 const reader = new FileReader();
                 reader.onload = function() { finishLoad(this.result, '📄'); };
