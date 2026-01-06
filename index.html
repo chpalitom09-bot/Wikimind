@@ -184,7 +184,7 @@
 
         /* Image Editor Modal */
         #editor-modal .modal-content { max-width: 800px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
-        #editor-canvas { width: 100%; height: auto; border: 1px dashed var(--border); cursor: crosshair; touch-action: none; background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHBhdGggZD0iTTAgMGgxMHYxMEgwVjB6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTAgMGh1djVIMFYwek01IDVoNXY1SDVWNXoiIGZpbGw9IiNlZWUiLz48L3N2Zz4='); }
+        #editor-canvas { width: 100%; height: auto; border: 1px dashed var(--border); cursor: crosshair; touch-action: none; background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHBhdGggZD0iTTAgMGgxMHYxMEgwVjB6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTAgMGg1djVIMFYwek01IDVoNXY1SDVWNXoiIGZpbGw9IiNlZWUiLz48L3N2Zz4='); }
         .tool-btn { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; font-size: 12px; font-weight: bold; }
         .tool-btn.active { background: var(--text); color: var(--bg); }
 
@@ -365,7 +365,9 @@
                 <h2 class="text-2xl font-black uppercase tracking-tighter">Chat Partagé</h2>
                 <p class="text-gray-400 text-sm mb-4">Rejoignez une conversation avec le code unique.</p>
                 <input type="text" id="room-code-input" placeholder="CODE (ex: WKM-8F3)" class="shared-room-input w-64">
-                <button onclick="joinSharedRoom()" class="bg-black text-white dark:bg-white dark:text-black px-8 py-3 rounded-full font-bold uppercase text-xs tracking-widest hover:scale-105 transition">Rejoindre</button>
+                <!-- ADDED: Create Button Logic via JS injection below -->
+                <button onclick="joinSharedRoom()" class="bg-black text-white dark:bg-white dark:text-black px-8 py-3 rounded-full font-bold uppercase text-xs tracking-widest hover:scale-105 transition mb-2">Rejoindre</button>
+                <button onclick="createSharedRoom()" class="border border-gray-300 dark:border-gray-600 px-8 py-3 rounded-full font-bold uppercase text-xs tracking-widest hover:scale-105 transition">Créer une conversation</button>
                 <p class="text-xs text-gray-400 mt-4">Mentionnez <b class="text-black dark:text-white">@wikimind</b> pour parler à l'IA.</p>
             </div>
             
@@ -2071,12 +2073,20 @@
             border-radius: 12px; backdrop-filter: blur(4px);
         }
         .dark-mode .processing-overlay { background: rgba(0,0,0,0.8); }
+
+        /* AJOUT: Bouton Share Icon */
+        .share-btn-icon {
+            cursor: pointer; color: #888; transition: 0.2s; display: flex; align-items: center; justify-content: center;
+            width: 30px; height: 30px; border-radius: 50%;
+        }
+        .share-btn-icon:hover { background: var(--select-bg); color: var(--text); }
     </style>
 
     <!-- HTML STRUCTURES EXTENSIONS -->
     <div id="extensions-container">
-        <!-- Auth Widget -->
+        <!-- Auth Widget with Share Button -->
         <div id="auth-widget-container">
+            <div id="share-room-btn" class="share-btn-icon hidden" onclick="shareRoomLink()" title="Copier le lien de la room">🔗</div>
             <div class="auth-avatar" onclick="toggleNewAuth()">?</div>
             <div id="new-auth-panel" class="auth-panel">
                 <h4 class="font-bold text-sm uppercase mb-2">Identité</h4>
@@ -2084,8 +2094,6 @@
                 <input type="text" id="new-auth-last" class="auth-input" placeholder="Nom">
                 <button onclick="saveNewAuth()" class="w-full bg-black text-white dark:bg-white dark:text-black py-2 rounded-lg font-bold text-xs uppercase mt-2">Enregistrer</button>
             </div>
-            <!-- AJOUT: Share Button GIST -->
-            <button onclick="shareGistRoom()" id="gist-share-btn" class="hidden ml-2 w-9 h-9 bg-green-500 text-white rounded-full flex items-center justify-center font-bold" title="Partager le lien">🔗</button>
         </div>
 
         <!-- Editor View -->
@@ -2117,11 +2125,13 @@
             initTypingObserver();
             overrideImageEditorTrigger();
             
-            // Initialisation GIST Mode si URL params
-            const params = new URLSearchParams(window.location.search);
-            if(params.has('room')) {
+            // Auto-join if URL param exists
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('room')) {
+                const roomCode = urlParams.get('room');
                 toggleSharedChat();
-                document.getElementById('room-code-input').value = params.get('room');
+                document.getElementById('room-code-input').value = roomCode;
+                joinSharedRoom();
             }
         };
 
@@ -2135,7 +2145,7 @@
                 document.getElementById('new-auth-last').value = id.last;
                 // Force update welcome text with fix color
                 const welcome = document.querySelector('#welcome-text p');
-                welcome.innerHTML = `Bienvenue <span class="font-bold user-name-highlight" style="color:var(--text);">${id.first}</span>, comment puis-je vous aider <span class="font-bold">?</span>`;
+                if(welcome) welcome.innerHTML = `Bienvenue <span class="font-bold user-name-highlight" style="color:var(--text);">${id.first}</span>, comment puis-je vous aider <span class="font-bold">?</span>`;
             } else {
                 avatar.innerText = "?";
             }
@@ -2149,10 +2159,6 @@
             const f = document.getElementById('new-auth-first').value.trim();
             const l = document.getElementById('new-auth-last').value.trim();
             if(f && l) {
-                // Si on change de nom en mode Gist, mettre à jour la liste users.json
-                if(gistRoomId && gistUser) {
-                     updateGistUsername(f);
-                }
                 localStorage.setItem('wikimind_user_identity', JSON.stringify({first: f, last: l}));
                 initNewAuthSystem();
                 toggleNewAuth();
@@ -2231,8 +2237,10 @@
                 
                 const ratio = Math.min(maxW / w, maxH / h);
                 newEditorCanvas.width = w;
-                newEditorCanvas.style.width = (w * ratio) + "px";
                 newEditorCanvas.height = h;
+                
+                // Style size
+                newEditorCanvas.style.width = (w * ratio) + "px";
                 newEditorCanvas.style.height = (h * ratio) + "px";
 
                 newEditorCtx.drawImage(img, 0, 0);
@@ -2333,11 +2341,17 @@
         };
 
         // --- AJOUT: LOGIQUE CHAT PARTAGÉ (Shared Chat) ---
-        let sharedWs = null;
+        // Utilisation de jsonblob.com comme backend gratuit (JSON Storage + Polling)
+        // Structure JSON: [{ author, content, is_ai, timestamp }]
+        
         let sharedRoomId = "";
         let sharedUsername = "Guest";
+        let pollInterval = null;
+        let lastTimestamp = 0;
+        const BLOB_API_URL = "https://jsonblob.com/api/jsonBlob";
 
-        function toggleSharedChat() {
+        // OVERRIDE: Surcharge de la fonction existante dans le HTML
+        window.toggleSharedChat = function() {
             // Masque les vues existantes
             document.getElementById('chat-container').style.display = 'none';
             document.getElementById('library-view').style.display = 'none';
@@ -2345,42 +2359,141 @@
             document.getElementById('input-wrapper').classList.add('hidden');
             document.getElementById('app-header').classList.add('hidden');
             
-            // Affiche la vue partagée (GIST VERSION)
+            // Affiche la vue partagée
             const view = document.getElementById('shared-chat-view');
             view.style.display = 'flex';
             
-            // Modification du bouton "Rejoindre" pour utiliser Gist
-            const login = document.getElementById('shared-login');
-            login.innerHTML = `
-                <div class="text-6xl mb-4">🔗</div>
-                <h2 class="text-2xl font-black uppercase tracking-tighter">Chat Partagé (Gist)</h2>
-                <p class="text-gray-400 text-sm mb-4">Synchronisation via GitHub Gist (No Backend).</p>
-                <div class="flex flex-col gap-2 w-full max-w-xs">
-                    <input type="password" id="gist-token" placeholder="GitHub Token (Obligatoire)" class="shared-room-input w-full text-xs">
-                    <input type="text" id="room-code-input" placeholder="ID GIST (ou vide pour créer)" class="shared-room-input w-full">
-                </div>
-                <div class="flex gap-2 mt-4">
-                    <button onclick="createGistRoom()" class="bg-gray-200 text-black px-6 py-3 rounded-full font-bold uppercase text-xs tracking-widest hover:scale-105 transition">Créer</button>
-                    <button onclick="joinGistRoom()" class="bg-black text-white dark:bg-white dark:text-black px-6 py-3 rounded-full font-bold uppercase text-xs tracking-widest hover:scale-105 transition">Rejoindre</button>
-                </div>
-                <p class="text-[9px] text-gray-400 mt-4 max-w-xs text-center">Nécessite un Token GitHub avec scope 'gist'. Aucune donnée stockée sur serveur WikiMind.</p>
-            `;
-
             const id = JSON.parse(localStorage.getItem('wikimind_user_identity'));
             if(id) sharedUsername = id.first;
+        };
+
+        // NEW: Fonction de création de room
+        window.createSharedRoom = async function() {
+            try {
+                // Créer un blob vide
+                const res = await fetch(BLOB_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify([])
+                });
+                
+                const location = res.headers.get('Location');
+                // Extract ID from URL (last part)
+                const newRoomId = location.substring(location.lastIndexOf('/') + 1);
+                
+                // Set and Join
+                document.getElementById('room-code-input').value = newRoomId;
+                joinSharedRoom();
+            } catch (e) {
+                alert("Erreur création room: " + e.message);
+            }
+        };
+
+        // OVERRIDE: Logique de jonction
+        window.joinSharedRoom = async function() {
+            const code = document.getElementById('room-code-input').value.trim();
+            if(!code) return alert("Entrez un code !");
             
-            // Pré-remplir token si dispo dans localStorage
-            const savedToken = localStorage.getItem('gh_token_pref');
-            if(savedToken) document.getElementById('gist-token').value = savedToken;
+            sharedRoomId = code;
+            
+            // Check if blob exists
+            try {
+                const check = await fetch(`${BLOB_API_URL}/${sharedRoomId}`);
+                if(!check.ok) throw new Error("Room introuvable");
+            } catch(e) {
+                return alert("Room invalide ou introuvable.");
+            }
+
+            document.getElementById('shared-login').style.display = 'none';
+            document.getElementById('shared-status').classList.remove('hidden');
+            document.getElementById('shared-room-display').innerText = `ROOM: ${code}`;
+            document.getElementById('shared-input-area').classList.remove('hidden');
+            document.getElementById('shared-messages-area').classList.remove('hidden');
+            document.getElementById('share-room-btn').classList.remove('hidden');
+
+            addSharedSystemMsg(`Vous avez rejoint la room ${code}.`);
+            
+            // Start polling
+            pollSharedRoom();
+            pollInterval = setInterval(pollSharedRoom, 2500); // Polling toutes les 2.5s
+        };
+
+        // NEW: Polling
+        async function pollSharedRoom() {
+            if(!sharedRoomId) return;
+            try {
+                const res = await fetch(`${BLOB_API_URL}/${sharedRoomId}`);
+                const messages = await res.json();
+                
+                // Filtrer les nouveaux messages
+                const newMessages = messages.filter(m => m.timestamp > lastTimestamp);
+                
+                if (newMessages.length > 0) {
+                    newMessages.forEach(m => renderSharedMessage(m));
+                    lastTimestamp = newMessages[newMessages.length - 1].timestamp;
+                }
+            } catch(e) {
+                console.error("Polling error", e);
+            }
         }
 
-        // --- MODIFICATION: JoinSharedRoom existant est bypassé par la nouvelle interface ci-dessus ---
-        function joinSharedRoom() { /* Legacy WS - Not used anymore */ }
-        function connectToWs() { /* Legacy WS - Not used anymore */ }
-        function sendSharedMessage() { 
-            // Redirige vers Gist Send
-            sendGistMessage();
-        }
+        // OVERRIDE: Envoi de message
+        window.sendSharedMessage = async function() {
+            const input = document.getElementById('shared-msg-input');
+            const txt = input.value.trim();
+            if(!txt) return;
+
+            input.value = "";
+            const timestamp = Date.now();
+            
+            const userMsg = {
+                author: sharedUsername,
+                content: txt,
+                is_ai: false,
+                timestamp: timestamp
+            };
+
+            // Optimistic update (optional, but let's wait for poll for consistence or push local)
+            // renderSharedMessage(userMsg); // Let's rely on poll/push flow for sync
+
+            try {
+                // 1. Get current list (to minimize overwrite race condition)
+                const res = await fetch(`${BLOB_API_URL}/${sharedRoomId}`);
+                const currentMsgs = await res.json();
+                
+                // 2. Add message
+                currentMsgs.push(userMsg);
+                
+                // 3. Check for AI mention
+                let aiResponseMsg = null;
+                if(txt.toLowerCase().includes("@wikimind")) {
+                    const aiReply = await getSharedAIResponse(txt, currentMsgs);
+                    aiResponseMsg = {
+                        author: "WikiMind",
+                        content: aiReply,
+                        is_ai: true,
+                        timestamp: Date.now() + 10 // small offset
+                    };
+                    currentMsgs.push(aiResponseMsg);
+                }
+
+                // 4. Update Blob
+                await fetch(`${BLOB_API_URL}/${sharedRoomId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(currentMsgs)
+                });
+
+                // Force poll immediately
+                pollSharedRoom();
+
+            } catch(e) {
+                addSharedSystemMsg("Erreur d'envoi. Réessayez.");
+            }
+        };
 
         function renderSharedMessage(data) {
             const area = document.getElementById('shared-messages-area');
@@ -2402,7 +2515,6 @@
                 div.innerHTML = `
                     <span class="shared-author">${data.author}</span>
                     <div class="shared-content">${marked.parse(data.content)}</div>
-                    <span class="text-[9px] opacity-50 absolute bottom-1 right-2">${new Date(data.timestamp).toLocaleTimeString()}</span>
                 `;
             }
             area.appendChild(div);
@@ -2413,240 +2525,38 @@
             renderSharedMessage({type: 'info', content: txt});
         }
 
-    </script>
-
-    <!-- EXTENSION: SHARED CHAT GIST (NO BACKEND) -->
-    <style>
-        #gist-token { letter-spacing: 0; text-transform: none; }
-    </style>
-
-    <script>
-        // --- GIST API LOGIC ---
-        let gistId = null;
-        let gistToken = null;
-        let gistInterval = null;
-        let gistUser = null;
-        let lastMsgCount = 0;
-
-        async function createGistRoom() {
-            gistToken = document.getElementById('gist-token').value.trim();
-            if(!gistToken) return alert("Token GitHub requis !");
-            localStorage.setItem('gh_token_pref', gistToken);
-            
-            gistUser = JSON.parse(localStorage.getItem('wikimind_user_identity'))?.first || "Guest";
-
-            addSharedSystemMsg("Création du Gist en cours...");
-            
-            const files = {
-                "messages.json": {
-                    "content": JSON.stringify([{
-                        author: "System", 
-                        content: "Salon créé.", 
-                        timestamp: Date.now(), 
-                        is_ai: false
-                    }])
-                },
-                "users.json": {
-                    "content": JSON.stringify([gistUser])
-                }
-            };
+        // Standalone AI logic for shared chat (Context independent of main chat)
+        async function getSharedAIResponse(prompt, history) {
+            // Build simplified context from last 10 messages
+            const contextMsgs = history.slice(-10).map(m => ({
+                role: m.is_ai ? "assistant" : "user",
+                content: `${m.author}: ${m.content}`
+            }));
 
             try {
-                const res = await fetch("https://api.github.com/gists", {
-                    method: "POST",
-                    headers: {
-                        "Authorization": `token ${gistToken}`,
-                        "Accept": "application/vnd.github.v3+json"
-                    },
-                    body: JSON.stringify({
-                        description: "WikiMind Shared Chat Room",
-                        public: true,
-                        files: files
-                    })
-                });
-
-                if(!res.ok) throw new Error("Erreur Création Gist");
-                const data = await res.json();
-                gistId = data.id;
-                
-                startGistSession();
-            } catch(e) {
-                alert("Erreur: " + e.message);
-            }
-        }
-
-        async function joinGistRoom() {
-            gistToken = document.getElementById('gist-token').value.trim();
-            const inputId = document.getElementById('room-code-input').value.trim();
-            
-            if(!gistToken || !inputId) return alert("Token et ID Gist requis !");
-            localStorage.setItem('gh_token_pref', gistToken);
-            
-            gistId = inputId;
-            gistUser = JSON.parse(localStorage.getItem('wikimind_user_identity'))?.first || "Guest";
-
-            try {
-                // 1. Check Users
-                const gistData = await fetchGist(gistId);
-                let users = JSON.parse(gistData.files["users.json"].content);
-                
-                if(users.includes(gistUser)) {
-                    // C'est nous ou doublon. On assume c'est nous (reconnexion)
-                } else {
-                    // Nouvel user
-                    users.push(gistUser);
-                    await updateGistFile(gistId, "users.json", JSON.stringify(users));
-                }
-
-                startGistSession();
-            } catch(e) {
-                alert("Impossible de rejoindre: " + e.message);
-            }
-        }
-
-        function startGistSession() {
-            document.getElementById('shared-login').style.display = 'none';
-            document.getElementById('shared-status').classList.remove('hidden');
-            document.getElementById('shared-room-display').innerText = `ID: ${gistId.substring(0,6)}...`;
-            document.getElementById('shared-input-area').classList.remove('hidden');
-            document.getElementById('shared-messages-area').classList.remove('hidden');
-            document.getElementById('gist-share-btn').classList.remove('hidden');
-            
-            addSharedSystemMsg("Connecté au Gist. Synchronisation...");
-            
-            // Initial poll
-            pollGist();
-            gistInterval = setInterval(pollGist, 3000); // 3s polling
-        }
-
-        async function fetchGist(id) {
-            const res = await fetch(`https://api.github.com/gists/${id}`, {
-                headers: { "Authorization": `token ${gistToken}` }
-            });
-            if(!res.ok) throw new Error("Gist introuvable");
-            return await res.json();
-        }
-
-        async function updateGistFile(id, filename, content) {
-            const files = {};
-            files[filename] = { content: content };
-            
-            await fetch(`https://api.github.com/gists/${id}`, {
-                method: "PATCH",
-                headers: {
-                    "Authorization": `token ${gistToken}`,
-                    "Accept": "application/vnd.github.v3+json"
-                },
-                body: JSON.stringify({ files: files })
-            });
-        }
-
-        async function pollGist() {
-            if(!gistId) return;
-            try {
-                const data = await fetchGist(gistId);
-                const msgs = JSON.parse(data.files["messages.json"].content);
-                
-                if(msgs.length > lastMsgCount) {
-                    // Render new messages only
-                    const newMsgs = msgs.slice(lastMsgCount);
-                    newMsgs.forEach(m => renderSharedMessage(m));
-                    lastMsgCount = msgs.length;
-                }
-            } catch(e) { console.error("Poll error", e); }
-        }
-
-        async function sendGistMessage() {
-            const input = document.getElementById('shared-msg-input');
-            const txt = input.value.trim();
-            if(!txt || !gistId) return;
-            
-            input.value = "";
-            
-            const newMsg = {
-                author: gistUser,
-                content: txt,
-                is_ai: false,
-                timestamp: Date.now()
-            };
-
-            // Optimistic rendering
-            // renderSharedMessage(newMsg); // Optional: wait for poll to confirm
-
-            try {
-                // Read-Modify-Write pattern (Race condition possible but acceptable for demo)
-                const data = await fetchGist(gistId);
-                let msgs = JSON.parse(data.files["messages.json"].content);
-                msgs.push(newMsg);
-                
-                await updateGistFile(gistId, "messages.json", JSON.stringify(msgs));
-                
-                // Trigger AI if mentioned
-                if(txt.toLowerCase().includes("@wikimind")) {
-                    triggerGistAI(txt);
-                }
-            } catch(e) {
-                addSharedSystemMsg("Erreur d'envoi: " + e.message);
-            }
-        }
-
-        async function triggerGistAI(userTxt) {
-            addSharedSystemMsg("WikiMind réfléchit...");
-            
-            try {
-                // Use existing callGroq logic logic but fetch only
                 const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEYS.GROQ}` },
                     body: JSON.stringify({ 
-                        model: "llama-3.3-70b-versatile",
+                        model: "llama-3.3-70b-versatile", 
                         messages: [
-                            {role: "system", content: "Tu es WikiMind dans un chat de groupe. Sois bref et utile."},
-                            {role: "user", content: userTxt}
+                            {role: "system", content: "Tu es WikiMind dans un chat de groupe. Sois concis et utile. Réponds en français."},
+                            ...contextMsgs
                         ] 
                     })
                 });
-                const aiData = await res.json();
-                const aiReply = aiData.choices[0].message.content;
-
-                // Push AI response to Gist
-                const aiMsg = {
-                    author: "WikiMind",
-                    content: aiReply,
-                    is_ai: true,
-                    timestamp: Date.now()
-                };
-
-                const data = await fetchGist(gistId);
-                let msgs = JSON.parse(data.files["messages.json"].content);
-                msgs.push(aiMsg);
-                await updateGistFile(gistId, "messages.json", JSON.stringify(msgs));
-
+                const data = await res.json();
+                return data.choices[0].message.content;
             } catch(e) {
-                addSharedSystemMsg("Erreur IA: " + e.message);
+                return "Désolé, je suis indisponible pour le moment.";
             }
         }
-        
-        async function updateGistUsername(newFirstname) {
-             if(!gistId || !gistToken) return;
-             try {
-                const data = await fetchGist(gistId);
-                let users = JSON.parse(data.files["users.json"].content);
-                // Remove old user
-                users = users.filter(u => u !== gistUser);
-                // Add new user
-                users.push(newFirstname);
-                await updateGistFile(gistId, "users.json", JSON.stringify(users));
-                gistUser = newFirstname;
-             } catch(e) { console.error("Update username fail", e); }
-        }
 
-        function shareGistRoom() {
-            if(!gistId) return;
-            const url = `${window.location.origin}${window.location.pathname}?room=${gistId}`;
+        window.shareRoomLink = function() {
+            const url = window.location.origin + window.location.pathname + "?room=" + sharedRoomId;
             navigator.clipboard.writeText(url);
             alert("Lien copié ! " + url);
-        }
+        };
 
     </script>
     </body>
