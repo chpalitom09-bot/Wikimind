@@ -2341,25 +2341,23 @@
         };
 
         // --- AJOUT: LOGIQUE CHAT PARTAGÉ (Shared Chat) ---
-        // Utilisation de jsonblob.com comme backend gratuit (JSON Storage + Polling)
-        // Structure JSON: [{ author, content, is_ai, timestamp }]
+        // Utilisation de KVStore.io pour éviter les erreurs "Failed to fetch" de JsonBlob
         
         let sharedRoomId = "";
         let sharedUsername = "Guest";
         let pollInterval = null;
         let lastTimestamp = 0;
-        const BLOB_API_URL = "https://jsonblob.com/api/jsonBlob";
+        // KVStore API: POST (create), PUT (update), GET (read)
+        const KVSTORE_URL = "https://kvstore.io/objects"; 
 
         // OVERRIDE: Surcharge de la fonction existante dans le HTML
         window.toggleSharedChat = function() {
-            // Masque les vues existantes
             document.getElementById('chat-container').style.display = 'none';
             document.getElementById('library-view').style.display = 'none';
             document.getElementById('welcome-text').classList.add('hidden-state');
             document.getElementById('input-wrapper').classList.add('hidden');
             document.getElementById('app-header').classList.add('hidden');
             
-            // Affiche la vue partagée
             const view = document.getElementById('shared-chat-view');
             view.style.display = 'flex';
             
@@ -2370,25 +2368,23 @@
         // NEW: Fonction de création de room
         window.createSharedRoom = async function() {
             try {
-                // Créer un blob vide
-                const res = await fetch(BLOB_API_URL, {
+                // Créer un objet vide sur kvstore.io qui renvoie un ID
+                const res = await fetch(KVSTORE_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify([])
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: [] })
                 });
                 
-                const location = res.headers.get('Location');
-                // Extract ID from URL (last part)
-                const newRoomId = location.substring(location.lastIndexOf('/') + 1);
+                if(!res.ok) throw new Error("Erreur service");
+                const data = await res.json();
                 
-                // Set and Join
+                // data.id est le code de la room
+                const newRoomId = data.id;
+                
                 document.getElementById('room-code-input').value = newRoomId;
                 joinSharedRoom();
             } catch (e) {
-                alert("Erreur création room: " + e.message);
+                alert("Impossible de créer une room. Le service de stockage gratuit est peut-être indisponible.");
             }
         };
 
@@ -2399,9 +2395,9 @@
             
             sharedRoomId = code;
             
-            // Check if blob exists
+            // Check if room exists by fetching it
             try {
-                const check = await fetch(`${BLOB_API_URL}/${sharedRoomId}`);
+                const check = await fetch(`${KVSTORE_URL}/${sharedRoomId}`);
                 if(!check.ok) throw new Error("Room introuvable");
             } catch(e) {
                 return alert("Room invalide ou introuvable.");
@@ -2418,22 +2414,24 @@
             
             // Start polling
             pollSharedRoom();
-            pollInterval = setInterval(pollSharedRoom, 2500); // Polling toutes les 2.5s
+            pollInterval = setInterval(pollSharedRoom, 2000); // Polling rapide
         };
 
         // NEW: Polling
         async function pollSharedRoom() {
             if(!sharedRoomId) return;
             try {
-                const res = await fetch(`${BLOB_API_URL}/${sharedRoomId}`);
-                const messages = await res.json();
+                const res = await fetch(`${KVSTORE_URL}/${sharedRoomId}`);
+                const data = await res.json();
                 
-                // Filtrer les nouveaux messages
-                const newMessages = messages.filter(m => m.timestamp > lastTimestamp);
-                
-                if (newMessages.length > 0) {
-                    newMessages.forEach(m => renderSharedMessage(m));
-                    lastTimestamp = newMessages[newMessages.length - 1].timestamp;
+                if(data.value && data.value.messages) {
+                    const messages = data.value.messages;
+                    const newMessages = messages.filter(m => m.timestamp > lastTimestamp);
+                    
+                    if (newMessages.length > 0) {
+                        newMessages.forEach(m => renderSharedMessage(m));
+                        lastTimestamp = newMessages[newMessages.length - 1].timestamp;
+                    }
                 }
             } catch(e) {
                 console.error("Polling error", e);
@@ -2456,38 +2454,33 @@
                 timestamp: timestamp
             };
 
-            // Optimistic update (optional, but let's wait for poll for consistence or push local)
-            // renderSharedMessage(userMsg); // Let's rely on poll/push flow for sync
-
             try {
-                // 1. Get current list (to minimize overwrite race condition)
-                const res = await fetch(`${BLOB_API_URL}/${sharedRoomId}`);
-                const currentMsgs = await res.json();
+                // 1. Get current list to append safely
+                const res = await fetch(`${KVSTORE_URL}/${sharedRoomId}`);
+                const data = await res.json();
                 
-                // 2. Add message
+                let currentMsgs = (data.value && data.value.messages) ? data.value.messages : [];
                 currentMsgs.push(userMsg);
                 
                 // 3. Check for AI mention
-                let aiResponseMsg = null;
                 if(txt.toLowerCase().includes("@wikimind")) {
                     const aiReply = await getSharedAIResponse(txt, currentMsgs);
-                    aiResponseMsg = {
+                    const aiResponseMsg = {
                         author: "WikiMind",
                         content: aiReply,
                         is_ai: true,
-                        timestamp: Date.now() + 10 // small offset
+                        timestamp: Date.now() + 10 
                     };
                     currentMsgs.push(aiResponseMsg);
                 }
 
-                // 4. Update Blob
-                await fetch(`${BLOB_API_URL}/${sharedRoomId}`, {
+                // 4. Update Store (PUT)
+                await fetch(`${KVSTORE_URL}/${sharedRoomId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(currentMsgs)
+                    body: JSON.stringify({ messages: currentMsgs })
                 });
 
-                // Force poll immediately
                 pollSharedRoom();
 
             } catch(e) {
@@ -2525,9 +2518,8 @@
             renderSharedMessage({type: 'info', content: txt});
         }
 
-        // Standalone AI logic for shared chat (Context independent of main chat)
+        // Standalone AI logic for shared chat
         async function getSharedAIResponse(prompt, history) {
-            // Build simplified context from last 10 messages
             const contextMsgs = history.slice(-10).map(m => ({
                 role: m.is_ai ? "assistant" : "user",
                 content: `${m.author}: ${m.content}`
