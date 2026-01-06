@@ -11,7 +11,8 @@
 </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WikiMind 4.6</title>
+    <!-- MODIFICATION: Passage en 5.1 -->
+    <title>WikiMind 5.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -202,6 +203,21 @@
 
         .chart-container { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin: 10px 0; }
 
+        /* AJOUT: Styles pour le Chat Partagé (Bêta) */
+        #shared-chat-view { display: none; flex-direction: column; height: 100%; position: relative; }
+        .shared-login-screen { position: absolute; inset: 0; background: var(--bg); z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; }
+        .shared-room-input { padding: 1rem; font-size: 1.2rem; border-radius: 12px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); text-align: center; letter-spacing: 2px; text-transform: uppercase; }
+        .shared-chat-area { flex-grow: 1; overflow-y: auto; padding: 2rem; padding-bottom: 100px; display: flex; flex-direction: column; gap: 1rem; }
+        .shared-message { max-width: 80%; padding: 10px 15px; border-radius: 12px; font-size: 0.95rem; line-height: 1.5; position: relative; }
+        .shared-message.own { margin-left: auto; background: var(--select-bg); border-bottom-right-radius: 2px; }
+        .shared-message.other { margin-right: auto; border: 1px solid var(--border); border-bottom-left-radius: 2px; }
+        .shared-message.ai { margin: 0 auto; width: 90%; border: 1px solid #22c55e; background: rgba(34, 197, 94, 0.05); }
+        .shared-author { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; opacity: 0.6; display: block; }
+        .shared-input-bar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 600px; display: flex; gap: 10px; background: var(--bg); padding: 10px; border-radius: 99px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .shared-status { position: absolute; top: 10px; right: 20px; font-size: 10px; font-weight: bold; color: #22c55e; display: flex; items-center; gap: 6px; }
+        .blink-dot { width: 8px; height: 8px; background: currentColor; border-radius: 50%; animation: blinker 1.5s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+
     </style>
 </head>
 <body>
@@ -315,6 +331,12 @@
                 Bibliothèque Apps
             </button>
 
+            <!-- AJOUT: Bouton pour le Chat Partagé -->
+            <button onclick="toggleSharedChat()" class="w-full mt-2 border border-blue-500 text-blue-500 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-blue-50 transition flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                Chat Partagé (Bêta)
+            </button>
+
             <div id="history-list" class="flex-grow overflow-y-auto space-y-1 pt-6"></div>
             <button id="settings-btn-sidebar" onclick="document.getElementById('settings-modal').style.display='flex'" class="flex items-center gap-3 p-3 mt-auto text-gray-400 hover:text-black transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -335,6 +357,31 @@
         </div>
 
         <div id="chat-container"></div>
+
+        <!-- AJOUT: Container du Chat Partagé (Caché par défaut) -->
+        <div id="shared-chat-view">
+            <div id="shared-login" class="shared-login-screen">
+                <div class="text-6xl mb-4">🌐</div>
+                <h2 class="text-2xl font-black uppercase tracking-tighter">Chat Partagé</h2>
+                <p class="text-gray-400 text-sm mb-4">Rejoignez une conversation avec le code unique.</p>
+                <input type="text" id="room-code-input" placeholder="CODE (ex: WKM-8F3)" class="shared-room-input w-64">
+                <button onclick="joinSharedRoom()" class="bg-black text-white dark:bg-white dark:text-black px-8 py-3 rounded-full font-bold uppercase text-xs tracking-widest hover:scale-105 transition">Rejoindre</button>
+                <p class="text-xs text-gray-400 mt-4">Mentionnez <b class="text-black dark:text-white">@wikimind</b> pour parler à l'IA.</p>
+            </div>
+            
+            <div id="shared-status" class="shared-status hidden">
+                <div class="blink-dot"></div> <span id="shared-room-display">ROOM</span>
+            </div>
+
+            <div id="shared-messages-area" class="shared-chat-area hidden">
+                <!-- Messages will appear here -->
+            </div>
+
+            <div id="shared-input-area" class="shared-input-bar hidden">
+                <input type="text" id="shared-msg-input" placeholder="Message au groupe... (@wikimind pour l'IA)" class="flex-grow bg-transparent border-none outline-none text-sm px-4" onkeydown="if(event.key === 'Enter') sendSharedMessage()">
+                <button onclick="sendSharedMessage()" class="bg-blue-500 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold">➤</button>
+            </div>
+        </div>
 
         <div id="library-view">
             <div class="mb-6">
@@ -2273,6 +2320,103 @@
                 }, 1500);
             }
         };
+
+        // --- AJOUT: LOGIQUE CHAT PARTAGÉ (Shared Chat) ---
+        let sharedWs = null;
+        let sharedRoomId = "";
+        let sharedUsername = "Guest";
+
+        function toggleSharedChat() {
+            // Masque les vues existantes
+            document.getElementById('chat-container').style.display = 'none';
+            document.getElementById('library-view').style.display = 'none';
+            document.getElementById('welcome-text').classList.add('hidden-state');
+            document.getElementById('input-wrapper').classList.add('hidden');
+            document.getElementById('app-header').classList.add('hidden');
+            
+            // Affiche la vue partagée
+            const view = document.getElementById('shared-chat-view');
+            view.style.display = 'flex';
+            
+            const id = JSON.parse(localStorage.getItem('wikimind_user_identity'));
+            if(id) sharedUsername = id.first;
+        }
+
+        function joinSharedRoom() {
+            const code = document.getElementById('room-code-input').value.trim().toUpperCase();
+            if(!code) return alert("Entrez un code !");
+            
+            sharedRoomId = code;
+            document.getElementById('shared-login').style.display = 'none';
+            document.getElementById('shared-status').classList.remove('hidden');
+            document.getElementById('shared-room-display').innerText = `ROOM: ${code}`;
+            document.getElementById('shared-input-area').classList.remove('hidden');
+            document.getElementById('shared-messages-area').classList.remove('hidden');
+
+            connectToWs();
+        }
+
+        function connectToWs() {
+            const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            // IMPORTANT: Remplacez l'URL par l'adresse de votre serveur Python
+            // Pour l'instant, on suppose localhost:8000 pour le test
+            const wsUrl = `ws://localhost:8000/ws/${sharedRoomId}/${sharedUsername}`;
+            
+            sharedWs = new WebSocket(wsUrl);
+
+            sharedWs.onopen = () => {
+                addSharedSystemMsg("Connecté au serveur.");
+            };
+
+            sharedWs.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                renderSharedMessage(data);
+            };
+
+            sharedWs.onclose = () => {
+                addSharedSystemMsg("Déconnecté. Reconnexion...");
+                setTimeout(connectToWs, 3000);
+            };
+        }
+
+        function sendSharedMessage() {
+            const input = document.getElementById('shared-msg-input');
+            const txt = input.value.trim();
+            if(!txt || !sharedWs) return;
+
+            sharedWs.send(txt);
+            input.value = "";
+        }
+
+        function renderSharedMessage(data) {
+            const area = document.getElementById('shared-messages-area');
+            const div = document.createElement('div');
+            
+            if(data.type === 'info') {
+                div.className = "text-center text-xs text-gray-400 my-2 italic";
+                div.innerText = data.content;
+            } else {
+                const isMe = data.author === sharedUsername;
+                const isAI = data.is_ai;
+                
+                let classes = "shared-message";
+                if(isAI) classes += " ai";
+                else if(isMe) classes += " own";
+                else classes += " other";
+
+                div.className = classes;
+                div.innerHTML = `
+                    <span class="shared-author">${data.author}</span>
+                    <div class="shared-content">${marked.parse(data.content)}</div>
+                `;
+            }
+            area.appendChild(div);
+            area.scrollTop = area.scrollHeight;
+        }
+
+        function addSharedSystemMsg(txt) {
+            renderSharedMessage({type: 'info', content: txt});
+        }
 
     </script>
     </body>
