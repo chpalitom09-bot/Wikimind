@@ -2341,14 +2341,15 @@
         };
 
         // --- AJOUT: LOGIQUE CHAT PARTAGÉ (Shared Chat) ---
-        // Utilisation de KVStore.io pour éviter les erreurs "Failed to fetch" de JsonBlob
+        // Utilisation de JsonBlob.com (Gratuit & Permanent)
         
         let sharedRoomId = "";
         let sharedUsername = "Guest";
         let pollInterval = null;
         let lastTimestamp = 0;
-        // KVStore API: POST (create), PUT (update), GET (read)
-        const KVSTORE_URL = "https://kvstore.io/objects"; 
+        
+        // Nouvelle URL API
+        const JSONBLOB_URL = "https://jsonblob.com/api/jsonBlob";
 
         // OVERRIDE: Surcharge de la fonction existante dans le HTML
         window.toggleSharedChat = function() {
@@ -2365,39 +2366,48 @@
             if(id) sharedUsername = id.first;
         };
 
-        // NEW: Fonction de création de room
+        // NEW: Fonction de création de room via JsonBlob
         window.createSharedRoom = async function() {
             try {
-                // Créer un objet vide sur kvstore.io qui renvoie un ID
-                const res = await fetch(KVSTORE_URL, {
+                // POST: Crée un blob vide {"messages": []}
+                const res = await fetch(JSONBLOB_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json' 
+                    },
                     body: JSON.stringify({ messages: [] })
                 });
                 
-                if(!res.ok) throw new Error("Erreur service");
-                const data = await res.json();
+                if(!res.ok) throw new Error("Erreur API JsonBlob");
                 
-                // data.id est le code de la room
-                const newRoomId = data.id;
+                // Récupère l'ID depuis le header Location
+                const locationHeader = res.headers.get('Location');
+                if (!locationHeader) throw new Error("ID de room introuvable");
+                
+                // Extrait l'ID final de l'URL
+                const newRoomId = locationHeader.substring(locationHeader.lastIndexOf('/') + 1);
                 
                 document.getElementById('room-code-input').value = newRoomId;
                 joinSharedRoom();
             } catch (e) {
-                alert("Impossible de créer une room. Le service de stockage gratuit est peut-être indisponible.");
+                alert("Erreur création room: " + e.message);
             }
         };
 
-        // OVERRIDE: Logique de jonction
+        // OVERRIDE: Logique de jonction (GET)
         window.joinSharedRoom = async function() {
             const code = document.getElementById('room-code-input').value.trim();
             if(!code) return alert("Entrez un code !");
             
             sharedRoomId = code;
             
-            // Check if room exists by fetching it
+            // Vérifie si la room existe via GET
             try {
-                const check = await fetch(`${KVSTORE_URL}/${sharedRoomId}`);
+                const check = await fetch(`${JSONBLOB_URL}/${sharedRoomId}`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
                 if(!check.ok) throw new Error("Room introuvable");
             } catch(e) {
                 return alert("Room invalide ou introuvable.");
@@ -2412,21 +2422,26 @@
 
             addSharedSystemMsg(`Vous avez rejoint la room ${code}.`);
             
-            // Start polling
+            // Lance le polling
             pollSharedRoom();
-            pollInterval = setInterval(pollSharedRoom, 2000); // Polling rapide
+            pollInterval = setInterval(pollSharedRoom, 2000); // 2s polling
         };
 
-        // NEW: Polling
+        // NEW: Polling (GET)
         async function pollSharedRoom() {
             if(!sharedRoomId) return;
             try {
-                const res = await fetch(`${KVSTORE_URL}/${sharedRoomId}`);
+                const res = await fetch(`${JSONBLOB_URL}/${sharedRoomId}`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                if(!res.ok) return; // Silent fail
+                
                 const data = await res.json();
                 
-                if(data.value && data.value.messages) {
-                    const messages = data.value.messages;
-                    const newMessages = messages.filter(m => m.timestamp > lastTimestamp);
+                // Structure { messages: [...] }
+                if(data.messages) {
+                    const newMessages = data.messages.filter(m => m.timestamp > lastTimestamp);
                     
                     if (newMessages.length > 0) {
                         newMessages.forEach(m => renderSharedMessage(m));
@@ -2438,7 +2453,7 @@
             }
         }
 
-        // OVERRIDE: Envoi de message
+        // OVERRIDE: Envoi de message (GET then PUT)
         window.sendSharedMessage = async function() {
             const input = document.getElementById('shared-msg-input');
             const txt = input.value.trim();
@@ -2455,14 +2470,16 @@
             };
 
             try {
-                // 1. Get current list to append safely
-                const res = await fetch(`${KVSTORE_URL}/${sharedRoomId}`);
+                // 1. Lire l'état actuel
+                const res = await fetch(`${JSONBLOB_URL}/${sharedRoomId}`, {
+                    headers: { 'Accept': 'application/json' }
+                });
                 const data = await res.json();
                 
-                let currentMsgs = (data.value && data.value.messages) ? data.value.messages : [];
+                let currentMsgs = data.messages || [];
                 currentMsgs.push(userMsg);
                 
-                // 3. Check for AI mention
+                // 2. Gestion IA
                 if(txt.toLowerCase().includes("@wikimind")) {
                     const aiReply = await getSharedAIResponse(txt, currentMsgs);
                     const aiResponseMsg = {
@@ -2474,14 +2491,17 @@
                     currentMsgs.push(aiResponseMsg);
                 }
 
-                // 4. Update Store (PUT)
-                await fetch(`${KVSTORE_URL}/${sharedRoomId}`, {
+                // 3. Mettre à jour (PUT)
+                await fetch(`${JSONBLOB_URL}/${sharedRoomId}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
                     body: JSON.stringify({ messages: currentMsgs })
                 });
 
-                pollSharedRoom();
+                pollSharedRoom(); // Refresh immédiat
 
             } catch(e) {
                 addSharedSystemMsg("Erreur d'envoi. Réessayez.");
