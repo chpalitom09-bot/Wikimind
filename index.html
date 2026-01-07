@@ -9,6 +9,31 @@
 
   gtag('config', 'G-T7N53M8869');
 </script>
+<!-- AJOUT FIREBASE IMPORTS (VERSION 10.7.0) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+  import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBhlNhB8yPNWXzok_STHG5q8hI4Kk_z7Ow",
+    authDomain: "wikimind-c3cef.firebaseapp.com",
+    databaseURL: "https://wikimind-c3cef-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "wikimind-c3cef",
+    storageBucket: "wikimind-c3cef.firebasestorage.app",
+    messagingSenderId: "5176412102",
+    appId: "1:5176412102:web:2069dc70dfe70b402594c7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  
+  // Exposition globale pour usage dans le script principal
+  window.fbDb = db;
+  window.fbRef = ref;
+  window.fbPush = push;
+  window.fbOnChildAdded = onChildAdded;
+</script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- MODIFICATION: Passage en 5.1 -->
@@ -332,10 +357,15 @@
             </button>
 
             <!-- AJOUT: Bouton pour le Chat Partagé -->
-            <button onclick="toggleSharedChat()" class="w-full mt-2 border border-blue-500 text-blue-500 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-blue-50 transition flex items-center justify-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                Chat Partagé (Bêta)
-            </button>
+            <div class="w-full mt-2 flex gap-2">
+                <button onclick="toggleSharedChat()" class="flex-grow border border-blue-500 text-blue-500 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-blue-50 transition flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    Chat Partagé (Bêta)
+                </button>
+                <button onclick="window.open('https://chpalitom09-bot.github.io/WikiMind_Bac/', '_blank')" class="w-1/3 border border-red-500 text-red-500 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-red-50 transition flex items-center justify-center">
+                    🎓 BAC
+                </button>
+            </div>
 
             <div id="history-list" class="flex-grow overflow-y-auto space-y-1 pt-6"></div>
             <button id="settings-btn-sidebar" onclick="document.getElementById('settings-modal').style.display='flex'" class="flex items-center gap-3 p-3 mt-auto text-gray-400 hover:text-black transition-colors">
@@ -2043,7 +2073,7 @@
             max-width: 1200px; margin: 0 auto; width: 100%;
         }
         #editor-view.active { display: flex; }
-        .editor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .editor-header { display: flex; justify-content space-between; align-items: center; margin-bottom: 1rem; }
         .editor-workspace {
             flex-grow: 1; position: relative; border-radius: 16px; overflow: hidden;
             background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHBhdGggZD0iTTAgMGgxMHYxMEgwVjB6IiBmaWxsPSIjODg4IiBvcGFjaXR5PSIwLjEiLz48L3N2Zz4=');
@@ -2341,15 +2371,12 @@
         };
 
         // --- AJOUT: LOGIQUE CHAT PARTAGÉ (Shared Chat) ---
-        // Utilisation de JsonBlob.com (Gratuit & Permanent)
+        // --- REMPLACEMENT PAR FIREBASE REALTIME DATABASE ---
         
         let sharedRoomId = "";
         let sharedUsername = "Guest";
-        let pollInterval = null;
-        let lastTimestamp = 0;
-        
-        // Nouvelle URL API
-        const JSONBLOB_URL = "https://jsonblob.com/api/jsonBlob";
+        window.currentUserId = 'User-' + Math.floor(Math.random() * 1000);
+        let localSharedHistory = []; // Pour passer l'historique à l'IA
 
         // OVERRIDE: Surcharge de la fonction existante dans le HTML
         window.toggleSharedChat = function() {
@@ -2366,52 +2393,23 @@
             if(id) sharedUsername = id.first;
         };
 
-        // NEW: Fonction de création de room via JsonBlob
-        window.createSharedRoom = async function() {
-            try {
-                // POST: Crée un blob vide {"messages": []}
-                const res = await fetch(JSONBLOB_URL, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json' 
-                    },
-                    body: JSON.stringify({ messages: [] })
-                });
-                
-                if(!res.ok) throw new Error("Erreur API JsonBlob");
-                
-                // Récupère l'ID depuis le header Location
-                const locationHeader = res.headers.get('Location');
-                if (!locationHeader) throw new Error("ID de room introuvable");
-                
-                // Extrait l'ID final de l'URL
-                const newRoomId = locationHeader.substring(locationHeader.lastIndexOf('/') + 1);
-                
-                document.getElementById('room-code-input').value = newRoomId;
-                joinSharedRoom();
-            } catch (e) {
-                alert("Erreur création room: " + e.message);
-            }
+        // NEW: Fonction de création de room via Firebase
+        window.createSharedRoom = function() {
+            // Génération d'un code aléatoire
+            const roomCode = "WKM-" + Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('room-code-input').value = roomCode;
+            
+            // Initialisation de la room dans Firebase (optionnel, join le fera)
+            // On rejoint directement
+            joinSharedRoom();
         };
 
-        // OVERRIDE: Logique de jonction (GET)
-        window.joinSharedRoom = async function() {
+        // OVERRIDE: Logique de jonction (Firebase Realtime)
+        window.joinSharedRoom = function() {
             const code = document.getElementById('room-code-input').value.trim();
-            if(!code) return alert("Entrez un code !");
+            if(!code) return alert("Code requis !");
             
             sharedRoomId = code;
-            
-            // Vérifie si la room existe via GET
-            try {
-                const check = await fetch(`${JSONBLOB_URL}/${sharedRoomId}`, {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' }
-                });
-                if(!check.ok) throw new Error("Room introuvable");
-            } catch(e) {
-                return alert("Room invalide ou introuvable.");
-            }
 
             document.getElementById('shared-login').style.display = 'none';
             document.getElementById('shared-status').classList.remove('hidden');
@@ -2422,89 +2420,59 @@
 
             addSharedSystemMsg(`Vous avez rejoint la room ${code}.`);
             
-            // Lance le polling
-            pollSharedRoom();
-            pollInterval = setInterval(pollSharedRoom, 2000); // 2s polling
+            // Connexion Firebase
+            const db = window.fbDb;
+            const messagesRef = window.fbRef(db, 'rooms/' + sharedRoomId + '/messages');
+            
+            // Réinitialiser la vue et l'historique local pour éviter les doublons si reconnexion
+            document.getElementById('shared-messages-area').innerHTML = "";
+            localSharedHistory = [];
+
+            window.fbOnChildAdded(messagesRef, (snapshot) => {
+                const msg = snapshot.val();
+                if(msg) {
+                    renderSharedMessage(msg);
+                    localSharedHistory.push(msg); // Maintien de l'historique pour l'IA
+                }
+            });
         };
 
-        // NEW: Polling (GET)
-        async function pollSharedRoom() {
-            if(!sharedRoomId) return;
-            try {
-                const res = await fetch(`${JSONBLOB_URL}/${sharedRoomId}`, {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' }
-                });
-                if(!res.ok) return; // Silent fail
-                
-                const data = await res.json();
-                
-                // Structure { messages: [...] }
-                if(data.messages) {
-                    const newMessages = data.messages.filter(m => m.timestamp > lastTimestamp);
-                    
-                    if (newMessages.length > 0) {
-                        newMessages.forEach(m => renderSharedMessage(m));
-                        lastTimestamp = newMessages[newMessages.length - 1].timestamp;
-                    }
-                }
-            } catch(e) {
-                console.error("Polling error", e);
-            }
-        }
-
-        // OVERRIDE: Envoi de message (GET then PUT)
+        // OVERRIDE: Envoi de message (Firebase Push)
         window.sendSharedMessage = async function() {
             const input = document.getElementById('shared-msg-input');
             const txt = input.value.trim();
             if(!txt) return;
 
             input.value = "";
-            const timestamp = Date.now();
+            
+            const db = window.fbDb;
+            const messagesRef = window.fbRef(db, 'rooms/' + sharedRoomId + '/messages');
             
             const userMsg = {
                 author: sharedUsername,
                 content: txt,
                 is_ai: false,
-                timestamp: timestamp
+                timestamp: Date.now(),
+                userId: window.currentUserId
             };
 
-            try {
-                // 1. Lire l'état actuel
-                const res = await fetch(`${JSONBLOB_URL}/${sharedRoomId}`, {
-                    headers: { 'Accept': 'application/json' }
-                });
-                const data = await res.json();
+            // Envoi message utilisateur
+            window.fbPush(messagesRef, userMsg);
+
+            // Gestion IA (@wikimind)
+            if(txt.toLowerCase().includes("@wikimind")) {
+                // Utilisation de l'historique local pour le contexte
+                const aiReply = await getSharedAIResponse(txt, localSharedHistory);
                 
-                let currentMsgs = data.messages || [];
-                currentMsgs.push(userMsg);
+                const aiResponseMsg = {
+                    author: "WikiMind",
+                    content: aiReply,
+                    is_ai: true,
+                    timestamp: Date.now() + 10,
+                    userId: "AI" 
+                };
                 
-                // 2. Gestion IA
-                if(txt.toLowerCase().includes("@wikimind")) {
-                    const aiReply = await getSharedAIResponse(txt, currentMsgs);
-                    const aiResponseMsg = {
-                        author: "WikiMind",
-                        content: aiReply,
-                        is_ai: true,
-                        timestamp: Date.now() + 10 
-                    };
-                    currentMsgs.push(aiResponseMsg);
-                }
-
-                // 3. Mettre à jour (PUT)
-                await fetch(`${JSONBLOB_URL}/${sharedRoomId}`, {
-                    method: 'PUT',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ messages: currentMsgs })
-                });
-
-                pollSharedRoom(); // Refresh immédiat
-
-            } catch(e) {
-                addSharedSystemMsg("Erreur d'envoi. Réessayez.");
+                window.fbPush(messagesRef, aiResponseMsg);
             }
         };
 
@@ -2516,7 +2484,8 @@
                 div.className = "text-center text-xs text-gray-400 my-2 italic";
                 div.innerText = data.content;
             } else {
-                const isMe = data.author === sharedUsername;
+                // Vérification si c'est moi via ID ou Author (fallback)
+                const isMe = (data.userId && data.userId === window.currentUserId) || (!data.userId && data.author === sharedUsername);
                 const isAI = data.is_ai;
                 
                 let classes = "shared-message";
@@ -2573,4 +2542,3 @@
     </script>
     </body>
 </html>
-
