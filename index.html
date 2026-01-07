@@ -228,15 +228,19 @@
 
         .chart-container { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin: 10px 0; }
 
-        /* AJOUT: Styles pour le Chat Partagé (Bêta) */
+        /* AJOUT: Styles pour le Chat Partagé (Bêta) - REDESIGN */
         #shared-chat-view { display: none; flex-direction: column; height: 100%; position: relative; }
         .shared-login-screen { position: absolute; inset: 0; background: var(--bg); z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; }
         .shared-room-input { padding: 1rem; font-size: 1.2rem; border-radius: 12px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); text-align: center; letter-spacing: 2px; text-transform: uppercase; }
         .shared-chat-area { flex-grow: 1; overflow-y: auto; padding: 2rem; padding-bottom: 100px; display: flex; flex-direction: column; gap: 1rem; }
+        
+        /* UPDATED SHARED MESSAGE STYLES */
         .shared-message { max-width: 80%; padding: 10px 15px; border-radius: 12px; font-size: 0.95rem; line-height: 1.5; position: relative; }
-        .shared-message.own { margin-left: auto; background: var(--select-bg); border-bottom-right-radius: 2px; }
-        .shared-message.other { margin-right: auto; border: 1px solid var(--border); border-bottom-left-radius: 2px; }
-        .shared-message.ai { margin: 0 auto; width: 90%; border: 1px solid #22c55e; background: rgba(34, 197, 94, 0.05); }
+        .shared-message.own { margin-left: auto; background: var(--select-bg); border-bottom-right-radius: 2px; text-align: right; }
+        .shared-message.other { margin-right: auto; border: 1px solid var(--border); border-bottom-left-radius: 2px; text-align: left; background: var(--bg); }
+        /* AI styling matches 'other' completely, no green bg */
+        .shared-message.ai { margin-right: auto; border: 1px solid var(--border); border-bottom-left-radius: 2px; text-align: left; background: var(--bg); }
+        
         .shared-author { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; opacity: 0.6; display: block; }
         .shared-input-bar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 600px; display: flex; gap: 10px; background: var(--bg); padding: 10px; border-radius: 99px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         .shared-status { position: absolute; top: 10px; right: 20px; font-size: 10px; font-weight: bold; color: #22c55e; display: flex; items-center; gap: 6px; }
@@ -343,7 +347,10 @@
     <div id="sidebar">
         <div class="p-6 border-b border-gray-50 flex flex-col gap-2">
             <div class="flex justify-between items-center">
-                <h1 class="font-black text-lg tracking-tighter uppercase italic">WikiMind</h1>
+                <h1 class="font-black text-lg tracking-tighter uppercase italic flex items-center gap-2">
+                    WikiMind
+                    <a href="https://chpalitom09-bot.github.io/WikiMind_Bac/" target="_blank" class="text-xs no-underline hover:scale-110 transition" title="WikiMind BAC">🎓</a>
+                </h1>
                 <button onclick="toggleSidebar()" class="text-gray-400 hover:text-black"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg></button>
             </div>
             <button onclick="document.getElementById('help-modal').style.display='flex'" class="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] hover:text-black text-left w-fit transition">Aide & Avis ▾</button>
@@ -356,13 +363,10 @@
                 Bibliothèque Apps
             </button>
 
-            <!-- AJOUT: Bouton pour le Chat Partagé (MODIFIÉ) -->
+            <!-- BOUTON CHAT PARTAGÉ (FULL WIDTH) -->
             <button onclick="toggleSharedChat()" class="w-full mt-2 border border-blue-500 text-blue-500 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-blue-50 transition flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                 Chat Partagé (Bêta)
-            </button>
-            <button onclick="window.open('https://chpalitom09-bot.github.io/WikiMind_Bac/', '_blank')" class="w-full mt-2 border border-red-500 text-red-500 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-red-50 transition flex items-center justify-center">
-                🎓 BAC
             </button>
 
             <div id="history-list" class="flex-grow overflow-y-auto space-y-1 pt-6"></div>
@@ -1728,19 +1732,32 @@
         }
 
         function saveCurrentChat() { if(!db) return; const tx = db.transaction("conversations", "readwrite"); tx.objectStore("conversations").put({ id: currentChatId, title: chatMessages[0].content.substring(0, 30), messages: chatMessages }); renderHistory(); }
-        function renderHistory() { if(!db) return; const tx = db.transaction("conversations", "readonly"); tx.objectStore("conversations").getAll().onsuccess = e => { const list = document.getElementById('history-list'); list.innerHTML = ""; e.target.result.reverse().forEach(chat => { const item = document.createElement('div'); item.className = "history-item group"; item.innerHTML = `<span onclick="loadChat('${chat.id}')" class="truncate flex-grow">${chat.title}</span><span onclick="deleteChat(${chat.id})" class="delete-chat">×</span>`; list.appendChild(item); }); }; }
-        function loadChat(id) {
-            // AJOUT: Gestion du chargement de l'historique Shared Chat
-            if (String(id).startsWith("SHARED_")) {
-                const code = id.split("_")[1];
-                toggleSharedChat();
-                document.getElementById('room-code-input').value = code;
-                joinSharedRoom();
-                return;
-            }
+        
+        // MODIFIED: renderHistory to handle shared chat type
+        function renderHistory() { 
+            if(!db) return; 
             const tx = db.transaction("conversations", "readonly"); 
-            tx.objectStore("conversations").get(id).onsuccess = e => { const chat = e.target.result; currentChatId = chat.id; chatMessages = chat.messages; document.getElementById('chat-container').innerHTML = ""; uiToChatMode(); chatMessages.forEach(m => { addMsg(m.content, m.role); }); }; 
+            tx.objectStore("conversations").getAll().onsuccess = e => { 
+                const list = document.getElementById('history-list'); 
+                list.innerHTML = ""; 
+                e.target.result.reverse().forEach(chat => { 
+                    const item = document.createElement('div'); 
+                    item.className = "history-item group"; 
+                    
+                    let clickAction = `loadChat(${chat.id})`;
+                    let title = chat.title;
+                    if (chat.type === 'shared') {
+                        clickAction = `joinSharedRoomFromHistory('${chat.roomCode}')`;
+                        title = `🌐 Room ${chat.roomCode}`;
+                    }
+
+                    item.innerHTML = `<span onclick="${clickAction}" class="truncate flex-grow">${title}</span><span onclick="deleteChat('${chat.id}')" class="delete-chat">×</span>`; 
+                    list.appendChild(item); 
+                }); 
+            }; 
         }
+
+        function loadChat(id) { const tx = db.transaction("conversations", "readonly"); tx.objectStore("conversations").get(id).onsuccess = e => { const chat = e.target.result; currentChatId = chat.id; chatMessages = chat.messages; document.getElementById('chat-container').innerHTML = ""; uiToChatMode(); chatMessages.forEach(m => { addMsg(m.content, m.role); }); }; }
         function deleteChat(id) { db.transaction("conversations", "readwrite").objectStore("conversations").delete(id).onsuccess = () => renderHistory(); }
         function uiToChatMode() { typingActive = false; document.getElementById('welcome-text').classList.add('hidden-state'); document.getElementById('input-wrapper').className = 'docked'; }
         function copy(btn, text) { navigator.clipboard.writeText(text); btn.style.color = "#22c55e"; setTimeout(()=> btn.style.color = "#bbb", 1500); }
@@ -2119,19 +2136,6 @@
             width: 30px; height: 30px; border-radius: 50%;
         }
         .share-btn-icon:hover { background: var(--select-bg); color: var(--text); }
-        
-        /* AJOUT: Chat Partagé Style Unifié (Gauche pour autres & AI) */
-        .shared-message.ai {
-            margin: 0 auto 0 0 !important;
-            width: auto !important;
-            max-width: 80% !important;
-            border: 1px solid var(--border) !important;
-            background: transparent !important;
-            border-bottom-left-radius: 2px !important;
-            border-bottom-right-radius: 12px !important;
-        }
-        /* Style Highlight pour @wikimind dans l'input */
-        .text-blue-500 { color: #3b82f6 !important; font-weight: bold; }
     </style>
 
     <!-- HTML STRUCTURES EXTENSIONS -->
@@ -2185,15 +2189,6 @@
                 document.getElementById('room-code-input').value = roomCode;
                 joinSharedRoom();
             }
-            
-            // Highlight listener for shared chat input
-            document.getElementById('shared-msg-input').addEventListener('input', function(e) {
-                if(e.target.value.toLowerCase().includes('@wikimind')) {
-                    e.target.classList.add('text-blue-500');
-                } else {
-                    e.target.classList.remove('text-blue-500');
-                }
-            });
         };
 
         // --- 1. NEW AUTH SYSTEM ---
@@ -2434,6 +2429,29 @@
             // On rejoint directement
             joinSharedRoom();
         };
+        
+        // NEW: Fonction Helper pour l'historique local
+        function saveSharedChatToHistory(code) {
+             if(!window.fbDb) return;
+             // On utilise IndexedDB local (db) pour la persistence sidebar
+             if(!db) return;
+             
+             const tx = db.transaction("conversations", "readwrite");
+             tx.objectStore("conversations").put({
+                 id: "SHARED-" + code,
+                 title: "Room " + code,
+                 type: 'shared',
+                 roomCode: code,
+                 messages: [] // Dummy, les messages sont sur Firebase
+             });
+             renderHistory();
+        }
+        
+        window.joinSharedRoomFromHistory = function(code) {
+            toggleSharedChat();
+            document.getElementById('room-code-input').value = code;
+            joinSharedRoom();
+        }
 
         // OVERRIDE: Logique de jonction (Firebase Realtime)
         window.joinSharedRoom = function() {
@@ -2441,6 +2459,9 @@
             if(!code) return alert("Code requis !");
             
             sharedRoomId = code;
+            
+            // Save to local history immediately
+            saveSharedChatToHistory(code);
 
             document.getElementById('shared-login').style.display = 'none';
             document.getElementById('shared-status').classList.remove('hidden');
@@ -2455,17 +2476,6 @@
             const db = window.fbDb;
             const messagesRef = window.fbRef(db, 'rooms/' + sharedRoomId + '/messages');
             
-            // Ajouter à l'historique local (Sidebar)
-            const tx = window.db.transaction("conversations", "readwrite");
-            tx.objectStore("conversations").put({
-                id: "SHARED_" + code,
-                title: "🔒 Room: " + code,
-                messages: [],
-                isShared: true,
-                roomCode: code
-            });
-            renderHistory();
-
             // Réinitialiser la vue et l'historique local pour éviter les doublons si reconnexion
             document.getElementById('shared-messages-area').innerHTML = "";
             localSharedHistory = [];
@@ -2486,7 +2496,6 @@
             if(!txt) return;
 
             input.value = "";
-            input.classList.remove('text-blue-500'); // Reset highlight
             
             const db = window.fbDb;
             const messagesRef = window.fbRef(db, 'rooms/' + sharedRoomId + '/messages');
@@ -2502,26 +2511,15 @@
             // Envoi message utilisateur
             window.fbPush(messagesRef, userMsg);
 
-            // Gestion IA (@wikimind)
-            if(txt.toLowerCase().includes("@wikimind")) {
-                let aiContent = "";
-                let isImage = false;
-
-                // Détection demande d'image
-                if(txt.match(/(dessine|génère|crée|fais).*(image|photo|dessin)/i)) {
-                    const prompt = txt.replace("@wikimind", "").trim();
-                    const seed = Date.now();
-                    const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${seed}`;
-                    aiContent = `![Génération](${imgUrl})`;
-                    isImage = true;
-                } else {
-                    // Utilisation de l'historique local pour le contexte
-                    aiContent = await getSharedAIResponse(txt, localSharedHistory);
-                }
+            // Gestion IA (@wikimind) - ou Mode IMAGE implicite
+            // Check image intent or mention
+            if(txt.toLowerCase().includes("@wikimind") || txt.match(/(image|dessine|génère).*(image|photo)/i)) {
+                // Utilisation de l'historique local pour le contexte
+                const aiReply = await getSharedAIResponse(txt, localSharedHistory);
                 
                 const aiResponseMsg = {
                     author: "WikiMind",
-                    content: aiContent,
+                    content: aiReply,
                     is_ai: true,
                     timestamp: Date.now() + 10,
                     userId: "AI" 
@@ -2540,16 +2538,14 @@
                 div.innerText = data.content;
             } else {
                 // Vérification si c'est moi via ID ou Author (fallback)
-                const isMe = (data.userId && data.userId === window.currentUserId) || (!data.userId && data.author === sharedUsername);
-                const isAI = data.is_ai;
+                const isMe = (data.userId && data.userId === window.currentUserId);
+                // Si c'est l'IA, on la traite comme "Other" (gauche) mais sans style spécial vert
+                // Le CSS gère .ai comme .other
                 
-                // Style unifié : AI est traité comme 'other' pour le style (Gauche, Gris/Neutre)
                 let classes = "shared-message";
-                if(isMe) classes += " own";
-                else {
-                    classes += " other";
-                    if(isAI) classes += " ai"; // Juste pour ciblage CSS spécifique si besoin d'override
-                }
+                if(data.is_ai) classes += " ai";
+                else if(isMe) classes += " own";
+                else classes += " other";
 
                 div.className = classes;
                 div.innerHTML = `
@@ -2567,14 +2563,21 @@
 
         // Standalone AI logic for shared chat
         async function getSharedAIResponse(prompt, history) {
+            // Check for Image Generation Intent
+            if (prompt.match(/(image|dessine|génère).*(image|photo|dessin)/i)) {
+                const seed = Date.now();
+                const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${seed}`;
+                return `![Image générée](${imageUrl})`;
+            }
+
+            // Normal Text Logic (High Intelligence)
             const contextMsgs = history.slice(-10).map(m => ({
                 role: m.is_ai ? "assistant" : "user",
                 content: `${m.author}: ${m.content}`
             }));
-            
-            const systemPrompt = `Tu es WikiMind. Tu participes à un chat de groupe. 
-            Sois intelligent, utile et concis. Utilise Markdown pour formater ta réponse.
-            Si on te demande de générer du code, utilise les blocs de code.`;
+
+            // Système prompt identique au chat principal
+            const systemPrompt = "Tu es WikiMind. Tu es poli, intelligent et utile. Utilise Markdown. Si on te demande de générer un PDF, explique que c'est réservé au chat privé.";
 
             try {
                 const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
