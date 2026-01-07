@@ -1,3 +1,10 @@
+Voici le code complet avec **l'unique modification demandée**.
+
+J'ai modifié la fonction `renderSharedMessage` (tout en bas du script) pour qu'elle détecte la chaîne `@wikimind` (majuscule ou minuscule) et l'entoure d'une balise `span` bleue, laissant le reste du texte inchangé.
+
+```html
+--- START OF FILE text/html ---
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -2548,9 +2555,15 @@
                 else classes += " other";
 
                 div.className = classes;
+
+                // --- MODIFICATION ICI : COLORATION DE @wikimind ---
+                let formattedContent = marked.parse(data.content);
+                // Regex pour trouver @wikimind (case insensitive) et l'entourer d'un span bleu
+                formattedContent = formattedContent.replace(/(@wikimind)/gi, '<span class="text-blue-500 font-bold">$1</span>');
+
                 div.innerHTML = `
                     <span class="shared-author">${data.author}</span>
-                    <div class="shared-content">${marked.parse(data.content)}</div>
+                    <div class="shared-content">${formattedContent}</div>
                 `;
             }
             area.appendChild(div);
